@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:proyecto_fut_app/features/auth/presentation/auth_controller.dart';
 import 'package:proyecto_fut_app/features/bookings/presentation/bookings_page.dart';
 import 'package:proyecto_fut_app/features/teams/presentation/teams_page.dart';
+import 'package:proyecto_fut_app/features/profile/presentation/profile_page.dart';
 import 'package:proyecto_fut_app/features/venues/presentation/venues_page.dart';
 import 'package:proyecto_fut_app/features/wallet/presentation/wallet_page.dart';
 
@@ -21,6 +22,7 @@ class _HomePageState extends State<HomePage> {
     TeamsPage(),
     BookingsPage(),
     const WalletPage(),
+    const ProfilePage(),
   ];
 
   @override
@@ -35,6 +37,7 @@ class _HomePageState extends State<HomePage> {
           NavigationDestination(icon: Icon(Icons.groups), label: 'Equipos'),
           NavigationDestination(icon: Icon(Icons.event_available), label: 'Reservas'),
           NavigationDestination(icon: Icon(Icons.account_balance_wallet), label: 'Wallet'),
+          NavigationDestination(icon: Icon(Icons.person_rounded), label: 'Perfil'),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
