@@ -123,7 +123,7 @@ model Booking {
   totalAmount   Decimal      @db.Decimal(10,2)
   commissionAmount Decimal    @db.Decimal(10,2)
   status        BookingStatus @default(PENDING)
-  holdId        String?
+  holdId String? @unique
   createdAt     DateTime      @default(now())
   venue         Venue         @relation(fields: [venueId], references: [id])
   user          User          @relation("BookingUser", fields: [userId], references: [id])
@@ -161,6 +161,7 @@ model Hold {
   referenceId   String
   createdAt     DateTime    @default(now())
   wallet        Wallet      @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  booking Booking?
 
   @@index([walletId, status])
 }
