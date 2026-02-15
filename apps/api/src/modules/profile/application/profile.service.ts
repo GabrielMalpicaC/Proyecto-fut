@@ -103,7 +103,9 @@ export class ProfileService {
 
     return {
       ...profile,
-      highlightedStories: profile.stories.filter((story: { isHighlighted: boolean }) => story.isHighlighted)
+      highlightedStories: profile.stories.filter(
+        (story: { isHighlighted: boolean }) => story.isHighlighted
+      )
     };
   }
 
