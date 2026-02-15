@@ -21,7 +21,6 @@ export class ProfileRepository {
     });
   }
 
-
   getCommunityFeed() {
     return this.prisma.post.findMany({
       orderBy: { createdAt: 'desc' },
