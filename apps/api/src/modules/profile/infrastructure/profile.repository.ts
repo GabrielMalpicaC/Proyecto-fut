@@ -21,16 +21,6 @@ export class ProfileRepository {
     });
   }
 
-  getLegacyProfile(userId: string) {
-    return this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        fullName: true
-      }
-    });
-  }
 
   getCommunityFeed() {
     return this.prisma.post.findMany({
