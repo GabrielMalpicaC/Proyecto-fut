@@ -53,36 +53,63 @@ class _ProfilePageState extends State<ProfilePage> {
                       fullName: profile['fullName']?.toString() ?? 'Jugador',
                       bio: profile['bio']?.toString() ?? 'Completa tu bio para conectar con más jugadores',
                       positions: selectedPositions,
+                      storiesCount: ctrl.stories.length,
+                      postsCount: ctrl.posts.length,
+                      highlightsCount: ctrl.highlightedStories.length,
                       onEdit: () => _openEditProfile(context, ctrl),
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () => _createStoryFromDevice(context, ctrl),
-                            icon: const Icon(Icons.auto_stories),
-                            label: const Text('Historia'),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF11162A),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: FilledButton.tonalIcon(
+                            onPressed: () async {
+                              try {
+                                await _createStoryFromDevice(context, ctrl);
+                              } catch (_) {
+                                if (!context.mounted) return;
+                                showMessage(context, ctrl.error ?? 'No pudimos crear la historia');
+                              }
+                            },
+                              icon: const Icon(Icons.auto_stories),
+                              label: const Text('Historia'),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () => _createPostFromDevice(context, ctrl),
-                            icon: const Icon(Icons.add_box_outlined),
-                            label: const Text('Publicar'),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: FilledButton.tonalIcon(
+                            onPressed: () async {
+                              try {
+                                await _createPostFromDevice(context, ctrl);
+                              } catch (_) {
+                                if (!context.mounted) return;
+                                showMessage(context, ctrl.error ?? 'No pudimos crear la publicación');
+                              }
+                            },
+                              icon: const Icon(Icons.add_box_outlined),
+                              label: const Text('Publicar'),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 18),
                     const Text('Historias', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                     const SizedBox(height: 10),
-                    SizedBox(
-                      height: 102,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: ctrl.stories.length,
+                    if (ctrl.stories.isEmpty)
+                      const Text('Todavía no tienes historias. Crea la primera 👆'),
+                    if (ctrl.stories.isNotEmpty)
+                      SizedBox(
+                        height: 102,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: ctrl.stories.length,
                         separatorBuilder: (_, __) => const SizedBox(width: 10),
                         itemBuilder: (context, index) {
                           final story = ctrl.stories[index] as Map<String, dynamic>;
@@ -94,10 +121,15 @@ class _ProfilePageState extends State<ProfilePage> {
                                 : 'Story ${index + 1}',
                             highlighted: highlighted,
                             onLongPress: () async {
-                              await ctrl.setStoryHighlight(
-                                storyId: story['id'].toString(),
-                                isHighlighted: !highlighted,
-                              );
+                              try {
+                                await ctrl.setStoryHighlight(
+                                  storyId: story['id'].toString(),
+                                  isHighlighted: !highlighted,
+                                );
+                              } catch (_) {
+                                if (!context.mounted) return;
+                                showMessage(context, ctrl.error ?? 'No se pudo actualizar la historia');
+                              }
                             },
                           );
                         },
@@ -115,9 +147,14 @@ class _ProfilePageState extends State<ProfilePage> {
                               selected: selectedPositions.contains(position),
                               label: Text(position),
                               onSelected: (_) async {
-                                final next = selectedPositions.toSet();
-                                next.contains(position) ? next.remove(position) : next.add(position);
-                                await ctrl.updateProfile(preferredPositions: next.toList());
+                                try {
+                                  final next = selectedPositions.toSet();
+                                  next.contains(position) ? next.remove(position) : next.add(position);
+                                  await ctrl.updateProfile(preferredPositions: next.toList());
+                                } catch (_) {
+                                  if (!context.mounted) return;
+                                  showMessage(context, ctrl.error ?? 'No se pudo actualizar tus posiciones');
+                                }
                               },
                             ),
                           )
@@ -126,10 +163,14 @@ class _ProfilePageState extends State<ProfilePage> {
                     const SizedBox(height: 18),
                     const Text('Mis publicaciones', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                     const SizedBox(height: 10),
-                    _PostsGrid(posts: ctrl.posts),
+                    if (ctrl.posts.isEmpty)
+                      const Text('Aún no publicaste nada.'),
+                    if (ctrl.posts.isNotEmpty) _PostsGrid(posts: ctrl.posts),
                     const SizedBox(height: 18),
                     const Text('Muro de la comunidad', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                     const SizedBox(height: 10),
+                    if (ctrl.feed.isEmpty)
+                      const Text('Todavía no hay publicaciones en la comunidad.'),
                     ...ctrl.feed.map((item) {
                       final post = item as Map<String, dynamic>;
                       final user = (post['user'] as Map<String, dynamic>?) ?? {};
@@ -167,6 +208,18 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                               const SizedBox(height: 8),
                               Text(post['content']?.toString() ?? ''),
+                              const SizedBox(height: 10),
+                              const Row(
+                                children: [
+                                  Icon(Icons.favorite_border, size: 18),
+                                  SizedBox(width: 6),
+                                  Text('Me gusta'),
+                                  SizedBox(width: 16),
+                                  Icon(Icons.mode_comment_outlined, size: 18),
+                                  SizedBox(width: 6),
+                                  Text('Comentar'),
+                                ],
+                              ),
                             ],
                           ),
                         ),
@@ -204,16 +257,21 @@ class _ProfilePageState extends State<ProfilePage> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () async {
-                      final file = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
-                      if (file == null) return;
-                      final mediaUrl = await ctrl.uploadMedia(file);
-                      await ctrl.updateProfile(
-                        fullName: nameCtrl.text.trim(),
-                        bio: bioCtrl.text.trim(),
-                        avatarUrl: mediaUrl,
-                      );
-                      if (!context.mounted) return;
-                      Navigator.pop(context);
+                      try {
+                        final file = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+                        if (file == null) return;
+                        final mediaUrl = await ctrl.uploadMedia(file);
+                        await ctrl.updateProfile(
+                          fullName: nameCtrl.text.trim(),
+                          bio: bioCtrl.text.trim(),
+                          avatarUrl: mediaUrl,
+                        );
+                        if (!context.mounted) return;
+                        Navigator.pop(context);
+                      } catch (_) {
+                        if (!context.mounted) return;
+                        showMessage(context, ctrl.error ?? 'No se pudo actualizar la foto de perfil');
+                      }
                     },
                     icon: const Icon(Icons.photo_library_outlined),
                     label: const Text('Subir foto'),
@@ -223,16 +281,21 @@ class _ProfilePageState extends State<ProfilePage> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () async {
-                      final file = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
-                      if (file == null) return;
-                      final mediaUrl = await ctrl.uploadMedia(file);
-                      await ctrl.updateProfile(
-                        fullName: nameCtrl.text.trim(),
-                        bio: bioCtrl.text.trim(),
-                        avatarUrl: mediaUrl,
-                      );
-                      if (!context.mounted) return;
-                      Navigator.pop(context);
+                      try {
+                        final file = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
+                        if (file == null) return;
+                        final mediaUrl = await ctrl.uploadMedia(file);
+                        await ctrl.updateProfile(
+                          fullName: nameCtrl.text.trim(),
+                          bio: bioCtrl.text.trim(),
+                          avatarUrl: mediaUrl,
+                        );
+                        if (!context.mounted) return;
+                        Navigator.pop(context);
+                      } catch (_) {
+                        if (!context.mounted) return;
+                        showMessage(context, ctrl.error ?? 'No se pudo actualizar la foto de perfil');
+                      }
                     },
                     icon: const Icon(Icons.photo_camera_outlined),
                     label: const Text('Tomar foto'),
@@ -243,12 +306,17 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 10),
             FilledButton(
               onPressed: () async {
-                await ctrl.updateProfile(
-                  fullName: nameCtrl.text.trim(),
-                  bio: bioCtrl.text.trim(),
-                );
-                if (!context.mounted) return;
-                Navigator.pop(context);
+                try {
+                  await ctrl.updateProfile(
+                    fullName: nameCtrl.text.trim(),
+                    bio: bioCtrl.text.trim(),
+                  );
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
+                } catch (_) {
+                  if (!context.mounted) return;
+                  showMessage(context, ctrl.error ?? 'No se pudo actualizar el perfil');
+                }
               },
               child: const Text('Guardar'),
             )
@@ -273,14 +341,19 @@ class _ProfilePageState extends State<ProfilePage> {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
           FilledButton(
             onPressed: () async {
-              final mediaUrl = await ctrl.uploadMedia(file);
-              await ctrl.createStory(
-                mediaUrl: mediaUrl,
-                caption: captionCtrl.text.trim().isEmpty ? null : captionCtrl.text.trim(),
-              );
-              if (!context.mounted) return;
-              Navigator.pop(context);
-              showMessage(context, 'Historia publicada');
+              try {
+                final mediaUrl = await ctrl.uploadMedia(file);
+                await ctrl.createStory(
+                  mediaUrl: mediaUrl,
+                  caption: captionCtrl.text.trim().isEmpty ? null : captionCtrl.text.trim(),
+                );
+                if (!context.mounted) return;
+                Navigator.pop(context);
+                showMessage(context, 'Historia publicada');
+              } catch (_) {
+                if (!context.mounted) return;
+                showMessage(context, ctrl.error ?? 'No se pudo publicar la historia');
+              }
             },
             child: const Text('Publicar'),
           )
@@ -338,17 +411,28 @@ class _ProfilePageState extends State<ProfilePage> {
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
             FilledButton(
               onPressed: () async {
-                String? mediaUrl;
-                if (selected != null) {
-                  mediaUrl = await ctrl.uploadMedia(selected!);
+                final content = contentCtrl.text.trim();
+                if (content.isEmpty) {
+                  showMessage(context, 'Escribe algo para publicar');
+                  return;
                 }
-                await ctrl.createPost(
-                  content: contentCtrl.text.trim(),
-                  imageUrl: mediaUrl,
-                );
-                if (!context.mounted) return;
-                Navigator.pop(context);
-                showMessage(context, 'Publicación creada');
+
+                try {
+                  String? mediaUrl;
+                  if (selected != null) {
+                    mediaUrl = await ctrl.uploadMedia(selected!);
+                  }
+                  await ctrl.createPost(
+                    content: content,
+                    imageUrl: mediaUrl,
+                  );
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
+                  showMessage(context, 'Publicación creada');
+                } catch (_) {
+                  if (!context.mounted) return;
+                  showMessage(context, ctrl.error ?? 'No se pudo crear la publicación');
+                }
               },
               child: const Text('Publicar'),
             )
@@ -365,6 +449,9 @@ class _HeaderCard extends StatelessWidget {
     required this.fullName,
     required this.bio,
     required this.positions,
+    required this.storiesCount,
+    required this.postsCount,
+    required this.highlightsCount,
     required this.onEdit,
   });
 
@@ -372,34 +459,82 @@ class _HeaderCard extends StatelessWidget {
   final String fullName;
   final String bio;
   final Set<String> positions;
+  final int storiesCount;
+  final int postsCount;
+  final int highlightsCount;
   final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(color: const Color(0xFF11162A), borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF1B2140), Color(0xFF2B145E)],
+        ),
+      ),
       padding: const EdgeInsets.all(16),
-      child: Row(
+      child: Column(
         children: [
-          CircleAvatar(
-            radius: 34,
-            backgroundImage: avatarUrl != null && avatarUrl!.isNotEmpty ? NetworkImage(avatarUrl!) : null,
-            child: avatarUrl == null || avatarUrl!.isEmpty ? const Icon(Icons.person, size: 32) : null,
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 36,
+                backgroundColor: Colors.white12,
+                backgroundImage: avatarUrl != null && avatarUrl!.isNotEmpty ? NetworkImage(avatarUrl!) : null,
+                child: avatarUrl == null || avatarUrl!.isEmpty ? const Icon(Icons.person, size: 34) : null,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+                    const SizedBox(height: 4),
+                    Text(bio, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  ],
+                ),
+              ),
+              IconButton(onPressed: onEdit, icon: const Icon(Icons.edit))
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                const SizedBox(height: 4),
-                Text(bio, maxLines: 2, overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 6),
-                Wrap(spacing: 6, children: positions.map((p) => Chip(label: Text(p))).toList()),
-              ],
-            ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _StatPill(label: 'Publicaciones', value: postsCount.toString()),
+              _StatPill(label: 'Historias', value: storiesCount.toString()),
+              _StatPill(label: 'Destacadas', value: highlightsCount.toString()),
+            ],
           ),
-          IconButton(onPressed: onEdit, icon: const Icon(Icons.edit))
+          const SizedBox(height: 10),
+          Wrap(spacing: 6, runSpacing: 6, children: positions.map((p) => Chip(label: Text(p))).toList()),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatPill extends StatelessWidget {
+  const _StatPill({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
     );
