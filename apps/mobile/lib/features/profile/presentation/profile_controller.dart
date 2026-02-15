@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:proyecto_fut_app/features/profile/data/profile_repository.dart';
@@ -26,7 +27,7 @@ class ProfileController extends ChangeNotifier {
       profile = await _repository.getMe();
       feed = await _repository.getFeed();
     } catch (e) {
-      error = e.toString();
+      error = _toReadableError(e);
     } finally {
       loading = false;
       notifyListeners();
@@ -39,31 +40,79 @@ class ProfileController extends ChangeNotifier {
     String? avatarUrl,
     List<String>? preferredPositions,
   }) async {
-    await _repository.updateMe(
-      fullName: fullName,
-      bio: bio,
-      avatarUrl: avatarUrl,
-      preferredPositions: preferredPositions,
-    );
-    await fetch();
+    try {
+      await _repository.updateMe(
+        fullName: fullName,
+        bio: bio,
+        avatarUrl: avatarUrl,
+        preferredPositions: preferredPositions,
+      );
+      await fetch();
+    } catch (e) {
+      error = _toReadableError(e);
+      notifyListeners();
+      rethrow;
+    }
   }
 
-  Future<String> uploadMedia(XFile file) {
-    return _repository.uploadMedia(file);
+  Future<String> uploadMedia(XFile file) async {
+    try {
+      return await _repository.uploadMedia(file);
+    } catch (e) {
+      error = _toReadableError(e);
+      notifyListeners();
+      rethrow;
+    }
   }
 
   Future<void> createStory({required String mediaUrl, String? caption, bool isHighlighted = false}) async {
-    await _repository.createStory(mediaUrl: mediaUrl, caption: caption, isHighlighted: isHighlighted);
-    await fetch();
+    try {
+      await _repository.createStory(mediaUrl: mediaUrl, caption: caption, isHighlighted: isHighlighted);
+      await fetch();
+    } catch (e) {
+      error = _toReadableError(e);
+      notifyListeners();
+      rethrow;
+    }
   }
 
   Future<void> createPost({required String content, String? imageUrl}) async {
-    await _repository.createPost(content: content, imageUrl: imageUrl);
-    await fetch();
+    try {
+      await _repository.createPost(content: content, imageUrl: imageUrl);
+      await fetch();
+    } catch (e) {
+      error = _toReadableError(e);
+      notifyListeners();
+      rethrow;
+    }
   }
 
   Future<void> setStoryHighlight({required String storyId, required bool isHighlighted}) async {
-    await _repository.setStoryHighlight(storyId: storyId, isHighlighted: isHighlighted);
-    await fetch();
+    try {
+      await _repository.setStoryHighlight(storyId: storyId, isHighlighted: isHighlighted);
+      await fetch();
+    } catch (e) {
+      error = _toReadableError(e);
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  String _toReadableError(Object error) {
+    if (error is DioException) {
+      final data = error.response?.data;
+      if (data is Map<String, dynamic>) {
+        final message = data['message']?.toString();
+        if (message != null && message.isNotEmpty) return message;
+      }
+
+      if (error.response?.statusCode == 503) {
+        return 'Perfil temporalmente no disponible. Intenta nuevamente en unos minutos.';
+      }
+
+      return 'No se pudo completar la operación. Revisa tu conexión e intenta otra vez.';
+    }
+
+    return 'Ocurrió un error inesperado.';
   }
 }
