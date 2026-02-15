@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { AppError } from '@/common/errors/app-error';
 import { IMediaStorage, MEDIA_STORAGE } from '@/infrastructure/storage/media-storage.interface';
 import { ProfileRepository } from '../infrastructure/profile.repository';
@@ -11,17 +12,43 @@ export class ProfileService {
   ) {}
 
   async getMe(userId: string) {
-    const profile = await this.profileRepository.getProfile(userId);
-    if (!profile) throw new AppError('PROFILE_NOT_FOUND', 'Profile not found', 404);
+    try {
+      const profile = await this.profileRepository.getProfile(userId);
+      if (!profile) throw new AppError('PROFILE_NOT_FOUND', 'Profile not found', 404);
 
-    return {
-      ...profile,
-      highlightedStories: profile.stories.filter((story) => story.isHighlighted)
-    };
+      return {
+        ...profile,
+        highlightedStories: profile.stories.filter((story) => story.isHighlighted)
+      };
+    } catch (error) {
+      if (!this.isSchemaDriftError(error)) {
+        throw error;
+      }
+
+      const legacyProfile = await this.profileRepository.getLegacyProfile(userId);
+      if (!legacyProfile) throw new AppError('PROFILE_NOT_FOUND', 'Profile not found', 404);
+
+      return {
+        ...legacyProfile,
+        avatarUrl: null,
+        bio: null,
+        preferredPositions: [],
+        stories: [],
+        highlightedStories: [],
+        posts: []
+      };
+    }
   }
 
-  getFeed() {
-    return this.profileRepository.getCommunityFeed();
+  async getFeed() {
+    try {
+      return await this.profileRepository.getCommunityFeed();
+    } catch (error) {
+      if (this.isSchemaDriftError(error)) {
+        return [];
+      }
+      throw error;
+    }
   }
 
   updateMe(
@@ -60,5 +87,13 @@ export class ProfileService {
       contentType: file.mimetype
     });
     return { url };
+  }
+
+  private isSchemaDriftError(error: unknown): boolean {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+      return false;
+    }
+
+    return error.code === 'P2021' || error.code === 'P2022';
   }
 }
