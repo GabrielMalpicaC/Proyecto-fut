@@ -22,12 +22,24 @@ export class IdentityAccessRepository {
         },
         wallet: { create: {} }
       },
-      include: { roleAssignments: true }
+      select: {
+        id: true,
+        email: true,
+        roleAssignments: true
+      }
     });
   }
 
   async findByEmail(email: string) {
-    return this.prisma.user.findUnique({ where: { email }, include: { roleAssignments: true } });
+    return this.prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        passwordHash: true,
+        roleAssignments: true
+      }
+    });
   }
 
   async createRefreshToken(userId: string, token: string, expiresAt: Date) {
@@ -37,7 +49,15 @@ export class IdentityAccessRepository {
   async findRefreshToken(token: string) {
     return this.prisma.refreshToken.findUnique({
       where: { token },
-      include: { user: { include: { roleAssignments: true } } }
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            roleAssignments: true
+          }
+        }
+      }
     });
   }
 
