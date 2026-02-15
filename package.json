@@ -1,0 +1,16 @@
+{
+  "name": "proyecto-fut",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w apps/api",
+    "build": "npm run build -w apps/api",
+    "start": "npm run start -w apps/api",
+    "lint": "npm run lint -w apps/api",
+    "test": "npm run test -w apps/api",
+    "prisma:migrate": "npm run prisma:migrate -w apps/api",
+    "prisma:generate": "npm run prisma:generate -w apps/api"
+  }
+}

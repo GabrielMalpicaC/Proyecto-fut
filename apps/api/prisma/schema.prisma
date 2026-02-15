@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  PLAYER
+  VENUE_OWNER
+  REFEREE
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum HoldStatus {
+  ACTIVE
+  RELEASED
+  SETTLED
+  CANCELLED
+}
+
+enum LedgerEntryType {
+  CREDIT
+  DEBIT
+}
+
+model User {
+  id             String          @id @default(uuid())
+  email          String          @unique
+  passwordHash   String
+  fullName       String
+  roleAssignments RoleAssignment[]
+  refreshTokens  RefreshToken[]
+  teamsOwned     Team[]          @relation("TeamOwner")
+  teamMemberships TeamMember[]
+  teamInvitations TeamInvitation[] @relation("InvitedUser")
+  venues         Venue[]
+  bookings       Booking[]       @relation("BookingUser")
+  ownedBookings  Booking[]       @relation("BookingOwner")
+  wallet         Wallet?
+  createdAt      DateTime        @default(now())
+}
+
+model RoleAssignment {
+  id        String   @id @default(uuid())
+  userId    String
+  role      UserRole
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Team {
+  id          String           @id @default(uuid())
+  name        String
+  ownerId     String
+  owner       User             @relation("TeamOwner", fields: [ownerId], references: [id])
+  members     TeamMember[]
+  invitations TeamInvitation[]
+  createdAt   DateTime         @default(now())
+}
+
+model TeamMember {
+  id       String   @id @default(uuid())
+  teamId   String
+  userId   String
+  status   String
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+}
+
+model TeamInvitation {
+  id           String   @id @default(uuid())
+  teamId        String
+  invitedUserId String
+  status       String
+  createdAt    DateTime @default(now())
+  team         Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  invitedUser  User     @relation("InvitedUser", fields: [invitedUserId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, invitedUserId])
+}
+
+model Venue {
+  id          String   @id @default(uuid())
+  ownerId     String
+  name        String
+  location    String
+  pricePerHour Decimal @db.Decimal(10,2)
+  owner       User     @relation(fields: [ownerId], references: [id])
+  bookings    Booking[]
+  createdAt   DateTime @default(now())
+}
+
+model Booking {
+  id           String       @id @default(uuid())
+  venueId       String
+  userId        String
+  ownerId       String
+  startsAt      DateTime
+  endsAt        DateTime
+  totalAmount   Decimal      @db.Decimal(10,2)
+  commissionAmount Decimal    @db.Decimal(10,2)
+  status        BookingStatus @default(PENDING)
+  holdId        String?
+  createdAt     DateTime      @default(now())
+  venue         Venue         @relation(fields: [venueId], references: [id])
+  user          User          @relation("BookingUser", fields: [userId], references: [id])
+  owner         User          @relation("BookingOwner", fields: [ownerId], references: [id])
+  hold          Hold?         @relation(fields: [holdId], references: [id])
+}
+
+model Wallet {
+  id          String        @id @default(uuid())
+  userId      String        @unique
+  balance     Decimal       @default(0) @db.Decimal(12,2)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ledgerEntries LedgerEntry[]
+  holds       Hold[]
+  createdAt   DateTime      @default(now())
+}
+
+model LedgerEntry {
+  id          String          @id @default(uuid())
+  walletId    String
+  type        LedgerEntryType
+  amount      Decimal         @db.Decimal(12,2)
+  description String
+  referenceId String?
+  createdAt   DateTime        @default(now())
+  wallet      Wallet          @relation(fields: [walletId], references: [id], onDelete: Cascade)
+}
+
+model Hold {
+  id            String      @id @default(uuid())
+  walletId      String
+  amount        Decimal     @db.Decimal(12,2)
+  status        HoldStatus  @default(ACTIVE)
+  reason        String
+  referenceId   String
+  createdAt     DateTime    @default(now())
+  wallet        Wallet      @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId, status])
+}
