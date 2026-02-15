@@ -1,5 +1,4 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { AppError } from '@/common/errors/app-error';
 import { IMediaStorage, MEDIA_STORAGE } from '@/infrastructure/storage/media-storage.interface';
 import { ProfileRepository } from '../infrastructure/profile.repository';
@@ -18,14 +17,17 @@ export class ProfileService {
 
       return {
         ...profile,
-        highlightedStories: profile.stories.filter((story) => story.isHighlighted)
+        highlightedStories: profile.stories.filter(
+          (story: { isHighlighted: boolean }) => story.isHighlighted
+        )
       };
     } catch (error) {
       if (!this.isSchemaDriftError(error)) {
+        this.throwSchemaNotReady(error);
         throw error;
       }
 
-      const legacyProfile = await this.profileRepository.getProfile(userId);
+      const legacyProfile = await this.profileRepository.getLegacyProfile(userId);
       if (!legacyProfile) throw new AppError('PROFILE_NOT_FOUND', 'Profile not found', 404);
 
       return {
@@ -47,6 +49,7 @@ export class ProfileService {
       if (this.isSchemaDriftError(error)) {
         return [];
       }
+      this.throwSchemaNotReady(error);
       throw error;
     }
   }
@@ -117,17 +120,40 @@ export class ProfileService {
     if (this.isSchemaDriftError(error)) {
       throw new AppError(
         'PROFILE_SCHEMA_NOT_READY',
-        'Perfil temporalmente no disponible. Ejecuta las migraciones pendientes.',
+        'Perfil temporalmente no disponible. Ejecuta las migraciones pendientes con: npm run prisma:migrate',
+        503
+      );
+    }
+
+    if (this.isDatabaseUnavailableError(error)) {
+      throw new AppError(
+        'PROFILE_DB_UNAVAILABLE',
+        'No se pudo conectar a la base de datos. Verifica que el backend y Postgres estén levantados.',
         503
       );
     }
   }
 
   private isSchemaDriftError(error: unknown): boolean {
-    if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
-      return false;
+    const code = this.errorCode(error);
+    return code === 'P2021' || code === 'P2022';
+  }
+
+  private isDatabaseUnavailableError(error: unknown): boolean {
+    const code = this.errorCode(error);
+    return code === 'P1001' || code === 'P1008' || code === 'P1017';
+  }
+
+  private errorCode(error: unknown): string | null {
+    if (typeof error !== 'object' || error === null || !('code' in error)) {
+      return null;
     }
 
-    return error.code === 'P2021' || error.code === 'P2022';
+    const code = (error as { code?: unknown }).code;
+    if (typeof code === 'string' && code.length > 0) {
+      return code;
+    }
+
+    return null;
   }
 }

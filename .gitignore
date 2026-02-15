@@ -4,4 +4,3 @@ npm-debug.log*
 apps/api/.env
 apps/api/dist
 apps/api/coverage
-apps/api/prisma/migrations
