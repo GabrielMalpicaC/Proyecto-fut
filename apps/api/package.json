@@ -4,7 +4,7 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "dev": "nest start --watch",
+    "dev": "npm run prisma:generate && nest start --watch",
     "build": "nest build && tsc-alias",
     "start": "node dist/main.js",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
