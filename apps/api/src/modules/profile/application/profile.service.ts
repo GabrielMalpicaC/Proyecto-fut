@@ -51,28 +51,52 @@ export class ProfileService {
     }
   }
 
-  updateMe(
+  async updateMe(
     userId: string,
     body: { fullName?: string; bio?: string; avatarUrl?: string; preferredPositions?: string[] }
   ) {
-    return this.profileRepository.updateProfile(userId, body);
+    try {
+      return await this.profileRepository.updateProfile(userId, body);
+    } catch (error) {
+      this.throwSchemaNotReady(error);
+      throw error;
+    }
   }
 
-  createStory(
+  async createStory(
     userId: string,
     body: { mediaUrl: string; caption?: string; isHighlighted?: boolean }
   ) {
-    return this.profileRepository.createStory(userId, body);
+    try {
+      return await this.profileRepository.createStory(userId, body);
+    } catch (error) {
+      this.throwSchemaNotReady(error);
+      throw error;
+    }
   }
 
   async setStoryHighlighted(userId: string, storyId: string, isHighlighted: boolean) {
-    const result = await this.profileRepository.setStoryHighlighted(userId, storyId, isHighlighted);
-    if (result.count === 0) throw new AppError('STORY_NOT_FOUND', 'Story not found', 404);
-    return { ok: true };
+    try {
+      const result = await this.profileRepository.setStoryHighlighted(
+        userId,
+        storyId,
+        isHighlighted
+      );
+      if (result.count === 0) throw new AppError('STORY_NOT_FOUND', 'Story not found', 404);
+      return { ok: true };
+    } catch (error) {
+      this.throwSchemaNotReady(error);
+      throw error;
+    }
   }
 
-  createPost(userId: string, body: { content: string; imageUrl?: string }) {
-    return this.profileRepository.createPost(userId, body);
+  async createPost(userId: string, body: { content: string; imageUrl?: string }) {
+    try {
+      return await this.profileRepository.createPost(userId, body);
+    } catch (error) {
+      this.throwSchemaNotReady(error);
+      throw error;
+    }
   }
 
   async uploadMedia(
@@ -87,6 +111,16 @@ export class ProfileService {
       contentType: file.mimetype
     });
     return { url };
+  }
+
+  private throwSchemaNotReady(error: unknown): void {
+    if (this.isSchemaDriftError(error)) {
+      throw new AppError(
+        'PROFILE_SCHEMA_NOT_READY',
+        'Perfil temporalmente no disponible. Ejecuta las migraciones pendientes.',
+        503
+      );
+    }
   }
 
   private isSchemaDriftError(error: unknown): boolean {
