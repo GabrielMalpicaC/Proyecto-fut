@@ -6,6 +6,8 @@ import * as bcrypt from 'bcrypt';
 import { AppError } from '@/common/errors/app-error';
 import { IdentityAccessRepository } from '../infrastructure/identity-access.repository';
 
+type DbRoleAssignment = { id: string; createdAt: Date; userId: string; role: string };
+
 @Injectable()
 export class IdentityAccessService {
   constructor(
@@ -31,7 +33,7 @@ export class IdentityAccessService {
     return this.issueTokens(
       user.id,
       user.email,
-      user.roleAssignments.map((assignment: { role: UserRole }) => assignment.role)
+      user.roleAssignments.map((assignment: DbRoleAssignment) => assignment.role as UserRole)
     );
   }
 
@@ -44,7 +46,7 @@ export class IdentityAccessService {
     return this.issueTokens(
       user.id,
       user.email,
-      user.roleAssignments.map((assignment: { role: UserRole }) => assignment.role)
+      user.roleAssignments.map((assignment: DbRoleAssignment) => assignment.role as UserRole)
     );
   }
 
@@ -56,7 +58,7 @@ export class IdentityAccessService {
 
     await this.repository.deleteRefreshToken(refreshToken);
     const roles = storedToken.user.roleAssignments.map(
-      (assignment: { role: UserRole }) => assignment.role
+      (assignment: DbRoleAssignment) => assignment.role as UserRole
     );
 
     return this.issueTokens(storedToken.user.id, storedToken.user.email, roles);
