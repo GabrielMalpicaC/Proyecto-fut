@@ -32,6 +32,46 @@ export class ProfileRepository {
     });
   }
 
+  async ensureProfileSchemaReady() {
+    await this.prisma.$executeRawUnsafe(
+      'ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "avatarUrl" TEXT'
+    );
+    await this.prisma.$executeRawUnsafe('ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "bio" TEXT');
+    await this.prisma.$executeRawUnsafe(
+      'ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "preferredPositions" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[]'
+    );
+
+    await this.prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Post" (
+        "id" UUID PRIMARY KEY,
+        "userId" UUID NOT NULL,
+        "content" TEXT NOT NULL,
+        "imageUrl" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "Post_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
+      )
+    `);
+
+    await this.prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Story" (
+        "id" UUID PRIMARY KEY,
+        "userId" UUID NOT NULL,
+        "mediaUrl" TEXT NOT NULL,
+        "caption" TEXT,
+        "isHighlighted" BOOLEAN NOT NULL DEFAULT false,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "Story_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
+      )
+    `);
+
+    await this.prisma.$executeRawUnsafe(
+      'CREATE INDEX IF NOT EXISTS "Post_createdAt_idx" ON "Post"("createdAt" DESC)'
+    );
+    await this.prisma.$executeRawUnsafe(
+      'CREATE INDEX IF NOT EXISTS "Story_createdAt_idx" ON "Story"("createdAt" DESC)'
+    );
+  }
+
   getCommunityFeed() {
     return this.prisma.post.findMany({
       orderBy: { createdAt: 'desc' },

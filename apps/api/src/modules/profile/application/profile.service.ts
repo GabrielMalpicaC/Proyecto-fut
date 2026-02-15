@@ -12,33 +12,35 @@ export class ProfileService {
 
   async getMe(userId: string) {
     try {
-      const profile = await this.profileRepository.getProfile(userId);
-      if (!profile) throw new AppError('PROFILE_NOT_FOUND', 'Profile not found', 404);
-
-      return {
-        ...profile,
-        highlightedStories: profile.stories.filter(
-          (story: { isHighlighted: boolean }) => story.isHighlighted
-        )
-      };
+      return await this.getProfileWithHighlights(userId);
     } catch (error) {
       if (!this.isSchemaDriftError(error)) {
         this.throwSchemaNotReady(error);
         throw error;
       }
 
-      const legacyProfile = await this.profileRepository.getLegacyProfile(userId);
-      if (!legacyProfile) throw new AppError('PROFILE_NOT_FOUND', 'Profile not found', 404);
+      await this.profileRepository.ensureProfileSchemaReady();
 
-      return {
-        ...legacyProfile,
-        avatarUrl: null,
-        bio: null,
-        preferredPositions: [],
-        stories: [],
-        highlightedStories: [],
-        posts: []
-      };
+      try {
+        return await this.getProfileWithHighlights(userId);
+      } catch (retryError) {
+        if (!this.isSchemaDriftError(retryError)) {
+          throw retryError;
+        }
+
+        const legacyProfile = await this.profileRepository.getLegacyProfile(userId);
+        if (!legacyProfile) throw new AppError('PROFILE_NOT_FOUND', 'Profile not found', 404);
+
+        return {
+          ...legacyProfile,
+          avatarUrl: null,
+          bio: null,
+          preferredPositions: [],
+          stories: [],
+          highlightedStories: [],
+          posts: []
+        };
+      }
     }
   }
 
@@ -46,11 +48,12 @@ export class ProfileService {
     try {
       return await this.profileRepository.getCommunityFeed();
     } catch (error) {
-      if (this.isSchemaDriftError(error)) {
-        return [];
+      if (!this.isSchemaDriftError(error)) {
+        throw error;
       }
-      this.throwSchemaNotReady(error);
-      throw error;
+
+      await this.profileRepository.ensureProfileSchemaReady();
+      return this.profileRepository.getCommunityFeed();
     }
   }
 
@@ -58,48 +61,27 @@ export class ProfileService {
     userId: string,
     body: { fullName?: string; bio?: string; avatarUrl?: string; preferredPositions?: string[] }
   ) {
-    try {
-      return await this.profileRepository.updateProfile(userId, body);
-    } catch (error) {
-      this.throwSchemaNotReady(error);
-      throw error;
-    }
+    return this.withSchemaRecovery(() => this.profileRepository.updateProfile(userId, body));
   }
 
   async createStory(
     userId: string,
     body: { mediaUrl: string; caption?: string; isHighlighted?: boolean }
   ) {
-    try {
-      return await this.profileRepository.createStory(userId, body);
-    } catch (error) {
-      this.throwSchemaNotReady(error);
-      throw error;
-    }
+    return this.withSchemaRecovery(() => this.profileRepository.createStory(userId, body));
   }
 
   async setStoryHighlighted(userId: string, storyId: string, isHighlighted: boolean) {
-    try {
-      const result = await this.profileRepository.setStoryHighlighted(
-        userId,
-        storyId,
-        isHighlighted
-      );
-      if (result.count === 0) throw new AppError('STORY_NOT_FOUND', 'Story not found', 404);
-      return { ok: true };
-    } catch (error) {
-      this.throwSchemaNotReady(error);
-      throw error;
-    }
+    const result = await this.withSchemaRecovery<{ count: number }>(() =>
+      this.profileRepository.setStoryHighlighted(userId, storyId, isHighlighted)
+    );
+
+    if (result.count === 0) throw new AppError('STORY_NOT_FOUND', 'Story not found', 404);
+    return { ok: true };
   }
 
   async createPost(userId: string, body: { content: string; imageUrl?: string }) {
-    try {
-      return await this.profileRepository.createPost(userId, body);
-    } catch (error) {
-      this.throwSchemaNotReady(error);
-      throw error;
-    }
+    return this.withSchemaRecovery(() => this.profileRepository.createPost(userId, body));
   }
 
   async uploadMedia(
@@ -116,6 +98,36 @@ export class ProfileService {
     return { url };
   }
 
+  private async getProfileWithHighlights(userId: string) {
+    const profile = await this.profileRepository.getProfile(userId);
+    if (!profile) throw new AppError('PROFILE_NOT_FOUND', 'Profile not found', 404);
+
+    return {
+      ...profile,
+      highlightedStories: profile.stories.filter(
+        (story: { isHighlighted: boolean }) => story.isHighlighted
+      )
+    };
+  }
+
+  private async withSchemaRecovery<T>(operation: () => Promise<T>): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      if (!this.isSchemaDriftError(error)) {
+        throw error;
+      }
+
+      try {
+        await this.profileRepository.ensureProfileSchemaReady();
+        return await operation();
+      } catch (retryError) {
+        this.throwSchemaNotReady(retryError);
+        throw retryError;
+      }
+    }
+  }
+
   private throwSchemaNotReady(error: unknown): void {
     if (this.isSchemaDriftError(error)) {
       throw new AppError(
@@ -124,36 +136,14 @@ export class ProfileService {
         503
       );
     }
-
-    if (this.isDatabaseUnavailableError(error)) {
-      throw new AppError(
-        'PROFILE_DB_UNAVAILABLE',
-        'No se pudo conectar a la base de datos. Verifica que el backend y Postgres estén levantados.',
-        503
-      );
-    }
   }
 
   private isSchemaDriftError(error: unknown): boolean {
-    const code = this.errorCode(error);
-    return code === 'P2021' || code === 'P2022';
-  }
-
-  private isDatabaseUnavailableError(error: unknown): boolean {
-    const code = this.errorCode(error);
-    return code === 'P1001' || code === 'P1008' || code === 'P1017';
-  }
-
-  private errorCode(error: unknown): string | null {
     if (typeof error !== 'object' || error === null || !('code' in error)) {
-      return null;
+      return false;
     }
 
-    const code = (error as { code?: unknown }).code;
-    if (typeof code === 'string' && code.length > 0) {
-      return code;
-    }
-
-    return null;
+    const code = String((error as { code?: unknown }).code ?? '');
+    return code === 'P2021' || code === 'P2022';
   }
 }
