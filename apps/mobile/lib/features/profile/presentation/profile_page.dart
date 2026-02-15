@@ -60,7 +60,14 @@ class _ProfilePageState extends State<ProfilePage> {
                       children: [
                         Expanded(
                           child: OutlinedButton.icon(
-                            onPressed: () => _createStoryFromDevice(context, ctrl),
+                            onPressed: () async {
+                              try {
+                                await _createStoryFromDevice(context, ctrl);
+                              } catch (_) {
+                                if (!context.mounted) return;
+                                showMessage(context, ctrl.error ?? 'No pudimos crear la historia');
+                              }
+                            },
                             icon: const Icon(Icons.auto_stories),
                             label: const Text('Historia'),
                           ),
@@ -68,7 +75,14 @@ class _ProfilePageState extends State<ProfilePage> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: OutlinedButton.icon(
-                            onPressed: () => _createPostFromDevice(context, ctrl),
+                            onPressed: () async {
+                              try {
+                                await _createPostFromDevice(context, ctrl);
+                              } catch (_) {
+                                if (!context.mounted) return;
+                                showMessage(context, ctrl.error ?? 'No pudimos crear la publicación');
+                              }
+                            },
                             icon: const Icon(Icons.add_box_outlined),
                             label: const Text('Publicar'),
                           ),
@@ -78,11 +92,14 @@ class _ProfilePageState extends State<ProfilePage> {
                     const SizedBox(height: 18),
                     const Text('Historias', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                     const SizedBox(height: 10),
-                    SizedBox(
-                      height: 102,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: ctrl.stories.length,
+                    if (ctrl.stories.isEmpty)
+                      const Text('Todavía no tienes historias. Crea la primera 👆'),
+                    if (ctrl.stories.isNotEmpty)
+                      SizedBox(
+                        height: 102,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: ctrl.stories.length,
                         separatorBuilder: (_, __) => const SizedBox(width: 10),
                         itemBuilder: (context, index) {
                           final story = ctrl.stories[index] as Map<String, dynamic>;
@@ -126,10 +143,14 @@ class _ProfilePageState extends State<ProfilePage> {
                     const SizedBox(height: 18),
                     const Text('Mis publicaciones', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                     const SizedBox(height: 10),
-                    _PostsGrid(posts: ctrl.posts),
+                    if (ctrl.posts.isEmpty)
+                      const Text('Aún no publicaste nada.'),
+                    if (ctrl.posts.isNotEmpty) _PostsGrid(posts: ctrl.posts),
                     const SizedBox(height: 18),
                     const Text('Muro de la comunidad', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                     const SizedBox(height: 10),
+                    if (ctrl.feed.isEmpty)
+                      const Text('Todavía no hay publicaciones en la comunidad.'),
                     ...ctrl.feed.map((item) {
                       final post = item as Map<String, dynamic>;
                       final user = (post['user'] as Map<String, dynamic>?) ?? {};
@@ -243,12 +264,17 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 10),
             FilledButton(
               onPressed: () async {
-                await ctrl.updateProfile(
-                  fullName: nameCtrl.text.trim(),
-                  bio: bioCtrl.text.trim(),
-                );
-                if (!context.mounted) return;
-                Navigator.pop(context);
+                try {
+                  await ctrl.updateProfile(
+                    fullName: nameCtrl.text.trim(),
+                    bio: bioCtrl.text.trim(),
+                  );
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
+                } catch (_) {
+                  if (!context.mounted) return;
+                  showMessage(context, ctrl.error ?? 'No se pudo actualizar el perfil');
+                }
               },
               child: const Text('Guardar'),
             )

@@ -25,7 +25,7 @@ export class ProfileService {
         throw error;
       }
 
-      const legacyProfile = await this.profileRepository.getProfile(userId);
+      const legacyProfile = await this.profileRepository.getLegacyProfile(userId);
       if (!legacyProfile) throw new AppError('PROFILE_NOT_FOUND', 'Profile not found', 404);
 
       return {
