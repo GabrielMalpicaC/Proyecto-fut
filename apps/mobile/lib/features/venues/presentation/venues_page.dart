@@ -70,6 +70,21 @@ class _VenuesPageState extends State<VenuesPage> {
           const SizedBox(height: 8),
           if (ctrl.loading)
             const Center(child: CircularProgressIndicator())
+          else if (ctrl.error != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(ctrl.error!, style: const TextStyle(color: Colors.redAccent)),
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    onPressed: () => context.read<VenuesController>().fetch(query: _query.text.trim()),
+                    child: const Text('Reintentar'),
+                  ),
+                ],
+              ),
+            )
           else
             ...ctrl.venues.map(
               (v) => Card(

@@ -30,6 +30,11 @@ class _WalletPageState extends State<WalletPage> {
       title: 'Wallet & Ledger',
       body: ListView(
         children: [
+          if (ctrl.error != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(ctrl.error!, style: const TextStyle(color: Colors.redAccent)),
+            ),
           Card(
             child: ListTile(
               title: const Text('Saldo actual'),

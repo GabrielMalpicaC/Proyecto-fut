@@ -15,6 +15,7 @@ export class ProfileService {
       return await this.getProfileWithHighlights(userId);
     } catch (error) {
       if (!this.isSchemaDriftError(error)) {
+        this.throwSchemaNotReady(error);
         throw error;
       }
 
