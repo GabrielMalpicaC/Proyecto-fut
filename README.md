@@ -12,6 +12,8 @@ cp apps/api/.env.example apps/api/.env
 npm install
 npm run prisma:generate
 npm run prisma:migrate
+# o en entornos no interactivos:
+# npm run prisma:deploy
 npm run dev
 ```
 
@@ -31,3 +33,6 @@ flutter pub get
 flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:3000/api/v1
 ```
 Para móvil, reemplaza el dispositivo (`-d android` / `-d ios`).
+
+
+> Nota: en `docker-compose.yml` Postgres se expone en `localhost:55432`.

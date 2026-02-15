@@ -129,7 +129,7 @@ export class ProfileService {
     if (this.isSchemaDriftError(error)) {
       throw new AppError(
         'PROFILE_SCHEMA_NOT_READY',
-        'Perfil temporalmente no disponible. Ejecuta las migraciones pendientes.',
+        'Perfil temporalmente no disponible. Ejecuta las migraciones pendientes con: npm run prisma:migrate',
         503
       );
     }
