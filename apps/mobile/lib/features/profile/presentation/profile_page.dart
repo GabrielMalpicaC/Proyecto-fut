@@ -53,13 +53,22 @@ class _ProfilePageState extends State<ProfilePage> {
                       fullName: profile['fullName']?.toString() ?? 'Jugador',
                       bio: profile['bio']?.toString() ?? 'Completa tu bio para conectar con más jugadores',
                       positions: selectedPositions,
+                      storiesCount: ctrl.stories.length,
+                      postsCount: ctrl.posts.length,
+                      highlightsCount: ctrl.highlightedStories.length,
                       onEdit: () => _openEditProfile(context, ctrl),
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF11162A),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: FilledButton.tonalIcon(
                             onPressed: () async {
                               try {
                                 await _createStoryFromDevice(context, ctrl);
@@ -68,13 +77,13 @@ class _ProfilePageState extends State<ProfilePage> {
                                 showMessage(context, ctrl.error ?? 'No pudimos crear la historia');
                               }
                             },
-                            icon: const Icon(Icons.auto_stories),
-                            label: const Text('Historia'),
+                              icon: const Icon(Icons.auto_stories),
+                              label: const Text('Historia'),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: OutlinedButton.icon(
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: FilledButton.tonalIcon(
                             onPressed: () async {
                               try {
                                 await _createPostFromDevice(context, ctrl);
@@ -83,11 +92,12 @@ class _ProfilePageState extends State<ProfilePage> {
                                 showMessage(context, ctrl.error ?? 'No pudimos crear la publicación');
                               }
                             },
-                            icon: const Icon(Icons.add_box_outlined),
-                            label: const Text('Publicar'),
+                              icon: const Icon(Icons.add_box_outlined),
+                              label: const Text('Publicar'),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 18),
                     const Text('Historias', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
@@ -198,6 +208,18 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                               const SizedBox(height: 8),
                               Text(post['content']?.toString() ?? ''),
+                              const SizedBox(height: 10),
+                              const Row(
+                                children: [
+                                  Icon(Icons.favorite_border, size: 18),
+                                  SizedBox(width: 6),
+                                  Text('Me gusta'),
+                                  SizedBox(width: 16),
+                                  Icon(Icons.mode_comment_outlined, size: 18),
+                                  SizedBox(width: 6),
+                                  Text('Comentar'),
+                                ],
+                              ),
                             ],
                           ),
                         ),
@@ -427,6 +449,9 @@ class _HeaderCard extends StatelessWidget {
     required this.fullName,
     required this.bio,
     required this.positions,
+    required this.storiesCount,
+    required this.postsCount,
+    required this.highlightsCount,
     required this.onEdit,
   });
 
@@ -434,34 +459,82 @@ class _HeaderCard extends StatelessWidget {
   final String fullName;
   final String bio;
   final Set<String> positions;
+  final int storiesCount;
+  final int postsCount;
+  final int highlightsCount;
   final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(color: const Color(0xFF11162A), borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF1B2140), Color(0xFF2B145E)],
+        ),
+      ),
       padding: const EdgeInsets.all(16),
-      child: Row(
+      child: Column(
         children: [
-          CircleAvatar(
-            radius: 34,
-            backgroundImage: avatarUrl != null && avatarUrl!.isNotEmpty ? NetworkImage(avatarUrl!) : null,
-            child: avatarUrl == null || avatarUrl!.isEmpty ? const Icon(Icons.person, size: 32) : null,
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 36,
+                backgroundColor: Colors.white12,
+                backgroundImage: avatarUrl != null && avatarUrl!.isNotEmpty ? NetworkImage(avatarUrl!) : null,
+                child: avatarUrl == null || avatarUrl!.isEmpty ? const Icon(Icons.person, size: 34) : null,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+                    const SizedBox(height: 4),
+                    Text(bio, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  ],
+                ),
+              ),
+              IconButton(onPressed: onEdit, icon: const Icon(Icons.edit))
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                const SizedBox(height: 4),
-                Text(bio, maxLines: 2, overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 6),
-                Wrap(spacing: 6, children: positions.map((p) => Chip(label: Text(p))).toList()),
-              ],
-            ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _StatPill(label: 'Publicaciones', value: postsCount.toString()),
+              _StatPill(label: 'Historias', value: storiesCount.toString()),
+              _StatPill(label: 'Destacadas', value: highlightsCount.toString()),
+            ],
           ),
-          IconButton(onPressed: onEdit, icon: const Icon(Icons.edit))
+          const SizedBox(height: 10),
+          Wrap(spacing: 6, runSpacing: 6, children: positions.map((p) => Chip(label: Text(p))).toList()),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatPill extends StatelessWidget {
+  const _StatPill({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
     );
