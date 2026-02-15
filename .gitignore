@@ -1,0 +1,7 @@
+node_modules
+npm-debug.log*
+.env
+apps/api/.env
+apps/api/dist
+apps/api/coverage
+apps/api/prisma/migrations
