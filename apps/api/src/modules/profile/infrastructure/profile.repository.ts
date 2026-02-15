@@ -21,6 +21,22 @@ export class ProfileRepository {
     });
   }
 
+  getCommunityFeed() {
+    return this.prisma.post.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            avatarUrl: true
+          }
+        }
+      }
+    });
+  }
+
   updateProfile(
     userId: string,
     data: { fullName?: string; bio?: string; avatarUrl?: string; preferredPositions?: string[] }

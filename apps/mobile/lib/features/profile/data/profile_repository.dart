@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:proyecto_fut_app/core/network/api_client.dart';
 
 class ProfileRepository {
@@ -8,6 +10,11 @@ class ProfileRepository {
   Future<Map<String, dynamic>> getMe() async {
     final res = await _apiClient.dio.get<Map<String, dynamic>>('/profile/me');
     return res.data ?? {};
+  }
+
+  Future<List<dynamic>> getFeed() async {
+    final res = await _apiClient.dio.get<List<dynamic>>('/profile/feed');
+    return res.data ?? [];
   }
 
   Future<void> updateMe({
@@ -22,6 +29,16 @@ class ProfileRepository {
       if (avatarUrl != null) 'avatarUrl': avatarUrl,
       if (preferredPositions != null) 'preferredPositions': preferredPositions,
     });
+  }
+
+  Future<String> uploadMedia(XFile file) async {
+    final bytes = await file.readAsBytes();
+    final formData = FormData.fromMap({
+      'file': MultipartFile.fromBytes(bytes, filename: file.name),
+    });
+
+    final response = await _apiClient.dio.post<Map<String, dynamic>>('/profile/upload', data: formData);
+    return response.data?['url']?.toString() ?? '';
   }
 
   Future<void> createStory({required String mediaUrl, String? caption, bool isHighlighted = false}) async {

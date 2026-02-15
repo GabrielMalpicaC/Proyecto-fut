@@ -1,10 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { AppError } from '@/common/errors/app-error';
+import { IMediaStorage, MEDIA_STORAGE } from '@/infrastructure/storage/media-storage.interface';
 import { ProfileRepository } from '../infrastructure/profile.repository';
 
 @Injectable()
 export class ProfileService {
-  constructor(private readonly profileRepository: ProfileRepository) {}
+  constructor(
+    private readonly profileRepository: ProfileRepository,
+    @Inject(MEDIA_STORAGE) private readonly mediaStorage: IMediaStorage
+  ) {}
 
   async getMe(userId: string) {
     const profile = await this.profileRepository.getProfile(userId);
@@ -14,6 +18,10 @@ export class ProfileService {
       ...profile,
       highlightedStories: profile.stories.filter((story) => story.isHighlighted)
     };
+  }
+
+  getFeed() {
+    return this.profileRepository.getCommunityFeed();
   }
 
   updateMe(
@@ -38,5 +46,19 @@ export class ProfileService {
 
   createPost(userId: string, body: { content: string; imageUrl?: string }) {
     return this.profileRepository.createPost(userId, body);
+  }
+
+  async uploadMedia(
+    userId: string,
+    file: { buffer: Buffer; originalname: string; mimetype: string }
+  ) {
+    if (!file) throw new AppError('FILE_REQUIRED', 'File is required', 400);
+    const key = `profiles/${userId}/${Date.now()}-${file.originalname}`;
+    const url = await this.mediaStorage.upload({
+      key,
+      body: file.buffer,
+      contentType: file.mimetype
+    });
+    return { url };
   }
 }

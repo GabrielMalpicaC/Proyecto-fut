@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:proyecto_fut_app/features/profile/data/profile_repository.dart';
 
 class ProfileController extends ChangeNotifier {
@@ -7,7 +8,9 @@ class ProfileController extends ChangeNotifier {
   final ProfileRepository _repository;
 
   bool loading = false;
+  String? error;
   Map<String, dynamic> profile = {};
+  List<dynamic> feed = [];
 
   List<dynamic> get stories => (profile['stories'] as List<dynamic>?) ?? [];
   List<dynamic> get highlightedStories => (profile['highlightedStories'] as List<dynamic>?) ?? [];
@@ -17,9 +20,13 @@ class ProfileController extends ChangeNotifier {
 
   Future<void> fetch() async {
     loading = true;
+    error = null;
     notifyListeners();
     try {
       profile = await _repository.getMe();
+      feed = await _repository.getFeed();
+    } catch (e) {
+      error = e.toString();
     } finally {
       loading = false;
       notifyListeners();
@@ -39,6 +46,10 @@ class ProfileController extends ChangeNotifier {
       preferredPositions: preferredPositions,
     );
     await fetch();
+  }
+
+  Future<String> uploadMedia(XFile file) {
+    return _repository.uploadMedia(file);
   }
 
   Future<void> createStory({required String mediaUrl, String? caption, bool isHighlighted = false}) async {

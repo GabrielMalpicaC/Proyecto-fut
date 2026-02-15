@@ -6,9 +6,12 @@ import {
   Patch,
   Post,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
   UsePipes
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { z } from 'zod';
 import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe';
@@ -46,10 +49,24 @@ export class ProfileController {
     return this.profileService.getMe(req.user!.sub);
   }
 
+  @Get('feed')
+  feed() {
+    return this.profileService.getFeed();
+  }
+
   @Patch('me')
   @UsePipes(new ZodValidationPipe(updateProfileSchema))
   updateMe(@Req() req: Express.Request, @Body() body: z.infer<typeof updateProfileSchema>) {
     return this.profileService.updateMe(req.user!.sub, body);
+  }
+
+  @Post('upload')
+  @UseInterceptors(FileInterceptor('file'))
+  upload(
+    @Req() req: Express.Request,
+    @UploadedFile() file: { buffer: Buffer; originalname: string; mimetype: string }
+  ) {
+    return this.profileService.uploadMedia(req.user!.sub, file);
   }
 
   @Post('stories')
