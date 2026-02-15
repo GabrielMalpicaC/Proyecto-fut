@@ -38,6 +38,9 @@ model User {
   email          String          @unique
   passwordHash   String
   fullName       String
+  avatarUrl      String?
+  bio            String?
+  preferredPositions String[] @default([])
   roleAssignments RoleAssignment[]
   refreshTokens  RefreshToken[]
   teamsOwned     Team[]          @relation("TeamOwner")
@@ -47,7 +50,28 @@ model User {
   bookings       Booking[]       @relation("BookingUser")
   ownedBookings  Booking[]       @relation("BookingOwner")
   wallet         Wallet?
+  posts          Post[]
+  stories        Story[]
   createdAt      DateTime        @default(now())
+}
+
+model Post {
+  id        String   @id @default(uuid())
+  userId    String
+  content   String
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Story {
+  id            String   @id @default(uuid())
+  userId        String
+  mediaUrl      String
+  caption       String?
+  isHighlighted Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model RoleAssignment {

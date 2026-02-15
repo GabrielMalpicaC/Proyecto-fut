@@ -17,6 +17,7 @@ import { CompetitiveRankingModule } from './modules/competitive-ranking';
 import { TournamentsModule } from './modules/tournaments';
 import { AdsModule } from './modules/ads';
 import { AdminModerationModule } from './modules/admin-moderation';
+import { ProfileModule } from './modules/profile/profile.module';
 
 @Module({
   imports: [
@@ -37,7 +38,8 @@ import { AdminModerationModule } from './modules/admin-moderation';
     CompetitiveRankingModule,
     TournamentsModule,
     AdsModule,
-    AdminModerationModule
+    AdminModerationModule,
+    ProfileModule
   ]
 })
 export class AppModule {}
