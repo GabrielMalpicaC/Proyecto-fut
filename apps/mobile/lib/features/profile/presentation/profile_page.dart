@@ -111,10 +111,15 @@ class _ProfilePageState extends State<ProfilePage> {
                                 : 'Story ${index + 1}',
                             highlighted: highlighted,
                             onLongPress: () async {
-                              await ctrl.setStoryHighlight(
-                                storyId: story['id'].toString(),
-                                isHighlighted: !highlighted,
-                              );
+                              try {
+                                await ctrl.setStoryHighlight(
+                                  storyId: story['id'].toString(),
+                                  isHighlighted: !highlighted,
+                                );
+                              } catch (_) {
+                                if (!context.mounted) return;
+                                showMessage(context, ctrl.error ?? 'No se pudo actualizar la historia');
+                              }
                             },
                           );
                         },
@@ -132,9 +137,14 @@ class _ProfilePageState extends State<ProfilePage> {
                               selected: selectedPositions.contains(position),
                               label: Text(position),
                               onSelected: (_) async {
-                                final next = selectedPositions.toSet();
-                                next.contains(position) ? next.remove(position) : next.add(position);
-                                await ctrl.updateProfile(preferredPositions: next.toList());
+                                try {
+                                  final next = selectedPositions.toSet();
+                                  next.contains(position) ? next.remove(position) : next.add(position);
+                                  await ctrl.updateProfile(preferredPositions: next.toList());
+                                } catch (_) {
+                                  if (!context.mounted) return;
+                                  showMessage(context, ctrl.error ?? 'No se pudo actualizar tus posiciones');
+                                }
                               },
                             ),
                           )
@@ -225,16 +235,21 @@ class _ProfilePageState extends State<ProfilePage> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () async {
-                      final file = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
-                      if (file == null) return;
-                      final mediaUrl = await ctrl.uploadMedia(file);
-                      await ctrl.updateProfile(
-                        fullName: nameCtrl.text.trim(),
-                        bio: bioCtrl.text.trim(),
-                        avatarUrl: mediaUrl,
-                      );
-                      if (!context.mounted) return;
-                      Navigator.pop(context);
+                      try {
+                        final file = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+                        if (file == null) return;
+                        final mediaUrl = await ctrl.uploadMedia(file);
+                        await ctrl.updateProfile(
+                          fullName: nameCtrl.text.trim(),
+                          bio: bioCtrl.text.trim(),
+                          avatarUrl: mediaUrl,
+                        );
+                        if (!context.mounted) return;
+                        Navigator.pop(context);
+                      } catch (_) {
+                        if (!context.mounted) return;
+                        showMessage(context, ctrl.error ?? 'No se pudo actualizar la foto de perfil');
+                      }
                     },
                     icon: const Icon(Icons.photo_library_outlined),
                     label: const Text('Subir foto'),
@@ -244,16 +259,21 @@ class _ProfilePageState extends State<ProfilePage> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () async {
-                      final file = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
-                      if (file == null) return;
-                      final mediaUrl = await ctrl.uploadMedia(file);
-                      await ctrl.updateProfile(
-                        fullName: nameCtrl.text.trim(),
-                        bio: bioCtrl.text.trim(),
-                        avatarUrl: mediaUrl,
-                      );
-                      if (!context.mounted) return;
-                      Navigator.pop(context);
+                      try {
+                        final file = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
+                        if (file == null) return;
+                        final mediaUrl = await ctrl.uploadMedia(file);
+                        await ctrl.updateProfile(
+                          fullName: nameCtrl.text.trim(),
+                          bio: bioCtrl.text.trim(),
+                          avatarUrl: mediaUrl,
+                        );
+                        if (!context.mounted) return;
+                        Navigator.pop(context);
+                      } catch (_) {
+                        if (!context.mounted) return;
+                        showMessage(context, ctrl.error ?? 'No se pudo actualizar la foto de perfil');
+                      }
                     },
                     icon: const Icon(Icons.photo_camera_outlined),
                     label: const Text('Tomar foto'),
@@ -299,14 +319,19 @@ class _ProfilePageState extends State<ProfilePage> {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
           FilledButton(
             onPressed: () async {
-              final mediaUrl = await ctrl.uploadMedia(file);
-              await ctrl.createStory(
-                mediaUrl: mediaUrl,
-                caption: captionCtrl.text.trim().isEmpty ? null : captionCtrl.text.trim(),
-              );
-              if (!context.mounted) return;
-              Navigator.pop(context);
-              showMessage(context, 'Historia publicada');
+              try {
+                final mediaUrl = await ctrl.uploadMedia(file);
+                await ctrl.createStory(
+                  mediaUrl: mediaUrl,
+                  caption: captionCtrl.text.trim().isEmpty ? null : captionCtrl.text.trim(),
+                );
+                if (!context.mounted) return;
+                Navigator.pop(context);
+                showMessage(context, 'Historia publicada');
+              } catch (_) {
+                if (!context.mounted) return;
+                showMessage(context, ctrl.error ?? 'No se pudo publicar la historia');
+              }
             },
             child: const Text('Publicar'),
           )
@@ -364,17 +389,28 @@ class _ProfilePageState extends State<ProfilePage> {
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
             FilledButton(
               onPressed: () async {
-                String? mediaUrl;
-                if (selected != null) {
-                  mediaUrl = await ctrl.uploadMedia(selected!);
+                final content = contentCtrl.text.trim();
+                if (content.isEmpty) {
+                  showMessage(context, 'Escribe algo para publicar');
+                  return;
                 }
-                await ctrl.createPost(
-                  content: contentCtrl.text.trim(),
-                  imageUrl: mediaUrl,
-                );
-                if (!context.mounted) return;
-                Navigator.pop(context);
-                showMessage(context, 'Publicación creada');
+
+                try {
+                  String? mediaUrl;
+                  if (selected != null) {
+                    mediaUrl = await ctrl.uploadMedia(selected!);
+                  }
+                  await ctrl.createPost(
+                    content: content,
+                    imageUrl: mediaUrl,
+                  );
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
+                  showMessage(context, 'Publicación creada');
+                } catch (_) {
+                  if (!context.mounted) return;
+                  showMessage(context, ctrl.error ?? 'No se pudo crear la publicación');
+                }
               },
               child: const Text('Publicar'),
             )
