@@ -22,7 +22,8 @@ import { AdminModerationModule } from './modules/admin-moderation';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig, authConfig, redisConfig, storageConfig]
+      load: [appConfig, authConfig, redisConfig, storageConfig],
+      envFilePath: ['apps/api/.env', '.env']
     }),
     InfrastructureModule,
     IdentityAccessModule,
