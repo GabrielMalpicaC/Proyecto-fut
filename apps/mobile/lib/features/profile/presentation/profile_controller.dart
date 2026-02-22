@@ -12,6 +12,8 @@ class ProfileController extends ChangeNotifier {
   String? error;
   Map<String, dynamic> profile = {};
   List<dynamic> feed = [];
+  Map<String, dynamic> venueOwnerProfile = {};
+  List<dynamic> refereeAssignments = [];
 
   List<dynamic> get stories => (profile['stories'] as List<dynamic>?) ?? [];
   List<dynamic> get highlightedStories => (profile['highlightedStories'] as List<dynamic>?) ?? [];
@@ -26,12 +28,54 @@ class ProfileController extends ChangeNotifier {
     try {
       profile = await _repository.getMe();
       feed = await _repository.getFeed();
+      await fetchRoleDashboards();
     } catch (e) {
       error = _toReadableError(e);
     } finally {
       loading = false;
       notifyListeners();
     }
+  }
+
+
+  Future<void> fetchRoleDashboards() async {
+    try {
+      final roles = ((profile['roles'] as List<dynamic>?) ?? []).map((e) => e.toString()).toList();
+      if (roles.contains('VENUE_OWNER')) {
+        venueOwnerProfile = await _repository.getVenueOwnerProfile();
+      }
+      if (roles.contains('REFEREE')) {
+        refereeAssignments = await _repository.getRefereeAssignments();
+      }
+      notifyListeners();
+    } catch (_) {
+      // ignore dashboard fetch errors to not break profile load
+    }
+  }
+
+  Future<void> saveVenueOwnerProfile({
+    required String venueName,
+    String? venuePhotoUrl,
+    String? bio,
+    required String address,
+    required String contactPhone,
+    required String openingHours,
+    required List<Map<String, dynamic>> fields,
+  }) async {
+    await _repository.upsertVenueOwnerProfile(
+      venueName: venueName,
+      venuePhotoUrl: venuePhotoUrl,
+      bio: bio,
+      address: address,
+      contactPhone: contactPhone,
+      openingHours: openingHours,
+      fields: fields,
+    );
+    await fetchRoleDashboards();
+  }
+
+  Future<void> submitRefereeVerification(String documentUrl) async {
+    await _repository.submitRefereeVerification(documentUrl);
   }
 
   Future<void> updateProfile({

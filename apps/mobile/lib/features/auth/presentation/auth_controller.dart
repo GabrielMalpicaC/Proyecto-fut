@@ -23,9 +23,9 @@ class AuthController extends ChangeNotifier {
     });
   }
 
-  Future<void> register(String email, String fullName, String password) async {
+  Future<void> register(String email, String fullName, String password, String role) async {
     await _run(() async {
-      await _repository.register(email: email, fullName: fullName, password: password);
+      await _repository.register(email: email, fullName: fullName, password: password, role: role);
       _isAuthenticated = true;
     });
   }

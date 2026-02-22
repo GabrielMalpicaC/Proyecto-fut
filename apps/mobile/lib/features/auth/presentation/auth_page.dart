@@ -15,6 +15,7 @@ class _AuthPageState extends State<AuthPage> {
   final _password = TextEditingController();
   final _fullName = TextEditingController();
   bool registerMode = false;
+  String selectedRole = 'PLAYER';
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +44,17 @@ class _AuthPageState extends State<AuthPage> {
                     if (registerMode) ...[
                       TextField(controller: _fullName, decoration: const InputDecoration(labelText: 'Nombre completo')),
                       const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: selectedRole,
+                        decoration: const InputDecoration(labelText: '¿Qué vas a ser?'),
+                        items: const [
+                          DropdownMenuItem(value: 'PLAYER', child: Text('Jugador')),
+                          DropdownMenuItem(value: 'VENUE_OWNER', child: Text('Propietario de cancha')),
+                          DropdownMenuItem(value: 'REFEREE', child: Text('Árbitro')),
+                        ],
+                        onChanged: (value) => setState(() => selectedRole = value ?? 'PLAYER'),
+                      ),
+                      const SizedBox(height: 12),
                     ],
                     TextField(controller: _email, decoration: const InputDecoration(labelText: 'Correo')),
                     const SizedBox(height: 12),
@@ -54,7 +66,7 @@ class _AuthPageState extends State<AuthPage> {
                           : () async {
                               try {
                                 if (registerMode) {
-                                  await context.read<AuthController>().register(_email.text.trim(), _fullName.text.trim(), _password.text.trim());
+                                  await context.read<AuthController>().register(_email.text.trim(), _fullName.text.trim(), _password.text.trim(), selectedRole);
                                 } else {
                                   await context.read<AuthController>().login(_email.text.trim(), _password.text.trim());
                                 }

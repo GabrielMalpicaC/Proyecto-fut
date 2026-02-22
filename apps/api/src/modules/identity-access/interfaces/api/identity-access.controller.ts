@@ -8,6 +8,7 @@ const registerSchema = z.object({
   email: z.string().email(),
   fullName: z.string().min(3),
   password: z.string().min(8),
+  role: z.nativeEnum(UserRole).optional(),
   roles: z.array(z.nativeEnum(UserRole)).optional()
 });
 
@@ -27,7 +28,18 @@ export class IdentityAccessController {
   @Post('register')
   @UsePipes(new ZodValidationPipe(registerSchema))
   register(@Body() body: z.infer<typeof registerSchema>) {
-    return this.identityAccessService.register(body);
+    const normalizedRoles = body.roles?.length
+      ? body.roles
+      : body.role
+        ? [body.role]
+        : undefined;
+
+    return this.identityAccessService.register({
+      email: body.email,
+      fullName: body.fullName,
+      password: body.password,
+      roles: normalizedRoles
+    });
   }
 
   @Post('login')

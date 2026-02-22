@@ -38,10 +38,68 @@ export class ProfileService {
           preferredPositions: [],
           stories: [],
           highlightedStories: [],
-          posts: []
+          posts: [],
+          currentTeam: null,
+          isFreeAgent: true
         };
       }
     }
+  }
+
+
+  async getUserProfile(userId: string) {
+    return this.withSchemaRecovery(async () => {
+      const profile = await this.profileRepository.getPublicProfile(userId);
+      if (!profile) throw new AppError('PROFILE_NOT_FOUND', 'Profile not found', 404);
+
+      const currentMembership = profile.teamMemberships?.[0];
+      return {
+        ...profile,
+        currentTeam: currentMembership
+          ? {
+              role: currentMembership.role,
+              ...currentMembership.team
+            }
+          : null,
+        roles: (profile.roleAssignments ?? []).map((item: { role: string }) => item.role),
+      highlightedStories: profile.stories.filter(
+          (story: { isHighlighted: boolean }) => story.isHighlighted
+        )
+      };
+    });
+  }
+
+
+  async upsertVenueOwnerProfile(
+    userId: string,
+    body: {
+      venueName: string;
+      venuePhotoUrl?: string;
+      bio?: string;
+      address: string;
+      contactPhone: string;
+      openingHours: string;
+      fields: Array<{
+        name: string;
+        rates: Array<{ dayOfWeek: number; startHour: number; endHour: number; price: number }>;
+      }>;
+    }
+  ) {
+    return this.withSchemaRecovery(() => this.profileRepository.upsertVenueOwnerProfile(userId, body));
+  }
+
+  getVenueOwnerProfile(userId: string) {
+    return this.withSchemaRecovery(() => this.profileRepository.getVenueOwnerProfile(userId));
+  }
+
+  submitRefereeVerification(userId: string, body: { documentUrl: string }) {
+    return this.withSchemaRecovery(() =>
+      this.profileRepository.upsertRefereeVerification(userId, body.documentUrl)
+    );
+  }
+
+  getRefereeAssignments(userId: string) {
+    return this.withSchemaRecovery(() => this.profileRepository.getRefereeAssignments(userId));
   }
 
   async getFeed() {
@@ -102,8 +160,18 @@ export class ProfileService {
     const profile = await this.profileRepository.getProfile(userId);
     if (!profile) throw new AppError('PROFILE_NOT_FOUND', 'Profile not found', 404);
 
+    const currentMembership = profile.teamMemberships?.[0];
+
     return {
       ...profile,
+      currentTeam: currentMembership
+        ? {
+            role: currentMembership.role,
+            ...currentMembership.team
+          }
+        : null,
+      isFreeAgent: !currentMembership,
+      roles: (profile.roleAssignments ?? []).map((item: { role: string }) => item.role),
       highlightedStories: profile.stories.filter(
         (story: { isHighlighted: boolean }) => story.isHighlighted
       )
