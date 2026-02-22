@@ -60,7 +60,9 @@ export class TeamsRepository {
           orderBy: { role: 'asc' },
           select: {
             role: true,
-            user: { select: { id: true, fullName: true, avatarUrl: true, preferredPositions: true } }
+            user: {
+              select: { id: true, fullName: true, avatarUrl: true, preferredPositions: true }
+            }
           }
         },
         _count: {
