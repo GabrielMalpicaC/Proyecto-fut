@@ -38,7 +38,9 @@ export class ProfileService {
           preferredPositions: [],
           stories: [],
           highlightedStories: [],
-          posts: []
+          posts: [],
+          currentTeam: null,
+          isFreeAgent: true
         };
       }
     }
@@ -102,8 +104,17 @@ export class ProfileService {
     const profile = await this.profileRepository.getProfile(userId);
     if (!profile) throw new AppError('PROFILE_NOT_FOUND', 'Profile not found', 404);
 
+    const currentMembership = profile.teamMemberships?.[0];
+
     return {
       ...profile,
+      currentTeam: currentMembership
+        ? {
+            role: currentMembership.role,
+            ...currentMembership.team
+          }
+        : null,
+      isFreeAgent: !currentMembership,
       highlightedStories: profile.stories.filter(
         (story: { isHighlighted: boolean }) => story.isHighlighted
       )
