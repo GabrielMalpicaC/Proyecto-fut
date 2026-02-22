@@ -61,11 +61,45 @@ export class ProfileService {
               ...currentMembership.team
             }
           : null,
-        highlightedStories: profile.stories.filter(
+        roles: (profile.roleAssignments ?? []).map((item: { role: string }) => item.role),
+      highlightedStories: profile.stories.filter(
           (story: { isHighlighted: boolean }) => story.isHighlighted
         )
       };
     });
+  }
+
+
+  async upsertVenueOwnerProfile(
+    userId: string,
+    body: {
+      venueName: string;
+      venuePhotoUrl?: string;
+      bio?: string;
+      address: string;
+      contactPhone: string;
+      openingHours: string;
+      fields: Array<{
+        name: string;
+        rates: Array<{ dayOfWeek: number; startHour: number; endHour: number; price: number }>;
+      }>;
+    }
+  ) {
+    return this.withSchemaRecovery(() => this.profileRepository.upsertVenueOwnerProfile(userId, body));
+  }
+
+  getVenueOwnerProfile(userId: string) {
+    return this.withSchemaRecovery(() => this.profileRepository.getVenueOwnerProfile(userId));
+  }
+
+  submitRefereeVerification(userId: string, body: { documentUrl: string }) {
+    return this.withSchemaRecovery(() =>
+      this.profileRepository.upsertRefereeVerification(userId, body.documentUrl)
+    );
+  }
+
+  getRefereeAssignments(userId: string) {
+    return this.withSchemaRecovery(() => this.profileRepository.getRefereeAssignments(userId));
   }
 
   async getFeed() {
@@ -137,6 +171,7 @@ export class ProfileService {
           }
         : null,
       isFreeAgent: !currentMembership,
+      roles: (profile.roleAssignments ?? []).map((item: { role: string }) => item.role),
       highlightedStories: profile.stories.filter(
         (story: { isHighlighted: boolean }) => story.isHighlighted
       )

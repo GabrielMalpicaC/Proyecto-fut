@@ -53,6 +53,9 @@ model User {
   wallet         Wallet?
   posts          Post[]
   stories        Story[]
+  venueOwnerProfile VenueOwnerProfile?
+  refereeVerification RefereeVerification?
+  refereeAssignments MatchRefereeAssignment[]
   createdAt      DateTime        @default(now())
 }
 
@@ -195,8 +198,69 @@ model Match {
   homeTeam    Team        @relation("HomeTeam", fields: [homeTeamId], references: [id], onDelete: Cascade)
   awayTeam    Team        @relation("AwayTeam", fields: [awayTeamId], references: [id], onDelete: Cascade)
   queueEntries MatchQueue[]
+  refereeAssignments MatchRefereeAssignment[]
 
   @@index([mode, status, createdAt])
+}
+
+model MatchRefereeAssignment {
+  id         String   @id @default(uuid())
+  matchId    String
+  refereeId  String
+  venueName  String?
+  scheduledAt DateTime @default(now())
+  status     String   @default("PENDING")
+  createdAt  DateTime @default(now())
+  match      Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  referee    User     @relation(fields: [refereeId], references: [id], onDelete: Cascade)
+
+  @@index([refereeId, status])
+}
+
+model VenueOwnerProfile {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  venueName    String
+  venuePhotoUrl String?
+  bio          String?
+  address      String
+  contactPhone String
+  openingHours String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  owner        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fields       VenueField[]
+}
+
+model VenueField {
+  id          String   @id @default(uuid())
+  profileId   String
+  name        String
+  createdAt   DateTime @default(now())
+  profile     VenueOwnerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  rates       VenueFieldRate[]
+}
+
+model VenueFieldRate {
+  id          String   @id @default(uuid())
+  fieldId     String
+  dayOfWeek   Int
+  startHour   Int
+  endHour     Int
+  price       Decimal  @db.Decimal(10,2)
+  createdAt   DateTime @default(now())
+  field       VenueField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+}
+
+model RefereeVerification {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  documentUrl     String
+  verificationStatus String @default("PENDING")
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  referee         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model MatchQueue {

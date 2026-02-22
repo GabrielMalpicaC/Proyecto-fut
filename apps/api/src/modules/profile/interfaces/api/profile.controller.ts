@@ -39,6 +39,33 @@ const createPostSchema = z.object({
   imageUrl: z.string().url().optional()
 });
 
+
+const upsertVenueOwnerProfileSchema = z.object({
+  venueName: z.string().min(3),
+  venuePhotoUrl: z.string().url().optional(),
+  bio: z.string().max(300).optional(),
+  address: z.string().min(5),
+  contactPhone: z.string().min(6),
+  openingHours: z.string().min(3),
+  fields: z.array(
+    z.object({
+      name: z.string().min(2),
+      rates: z.array(
+        z.object({
+          dayOfWeek: z.number().int().min(0).max(6),
+          startHour: z.number().int().min(0).max(23),
+          endHour: z.number().int().min(1).max(24),
+          price: z.number().positive()
+        })
+      ).min(1)
+    })
+  ).min(1)
+});
+
+const refereeVerificationSchema = z.object({
+  documentUrl: z.string().url()
+});
+
 @Controller('profile')
 @UseGuards(JwtAuthGuard)
 export class ProfileController {
@@ -58,6 +85,36 @@ export class ProfileController {
   feed() {
     return this.profileService.getFeed();
   }
+
+
+  @Get('venue-owner/me')
+  venueOwnerProfile(@Req() req: Express.Request) {
+    return this.profileService.getVenueOwnerProfile(req.user!.sub);
+  }
+
+  @Patch('venue-owner/me')
+  @UsePipes(new ZodValidationPipe(upsertVenueOwnerProfileSchema))
+  upsertVenueOwnerProfile(
+    @Req() req: Express.Request,
+    @Body() body: z.infer<typeof upsertVenueOwnerProfileSchema>
+  ) {
+    return this.profileService.upsertVenueOwnerProfile(req.user!.sub, body);
+  }
+
+  @Get('referee/assignments')
+  refereeAssignments(@Req() req: Express.Request) {
+    return this.profileService.getRefereeAssignments(req.user!.sub);
+  }
+
+  @Post('referee/verification')
+  @UsePipes(new ZodValidationPipe(refereeVerificationSchema))
+  submitRefereeVerification(
+    @Req() req: Express.Request,
+    @Body() body: z.infer<typeof refereeVerificationSchema>
+  ) {
+    return this.profileService.submitRefereeVerification(req.user!.sub, body);
+  }
+
 
   @Patch('me')
   @UsePipes(new ZodValidationPipe(updateProfileSchema))

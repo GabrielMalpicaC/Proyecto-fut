@@ -15,6 +15,7 @@ export class ProfileRepository {
         avatarUrl: true,
         bio: true,
         preferredPositions: true,
+        roleAssignments: { select: { role: true } },
         teamMemberships: {
           where: { status: 'ACTIVE' },
           take: 1,
@@ -49,6 +50,7 @@ export class ProfileRepository {
         avatarUrl: true,
         bio: true,
         preferredPositions: true,
+        roleAssignments: { select: { role: true } },
         teamMemberships: {
           where: { status: 'ACTIVE' },
           take: 1,
@@ -67,6 +69,101 @@ export class ProfileRepository {
         },
         posts: { orderBy: { createdAt: 'desc' }, take: 15 },
         stories: { orderBy: { createdAt: 'desc' }, take: 10 }
+      }
+    });
+  }
+
+
+  upsertVenueOwnerProfile(
+    userId: string,
+    data: {
+      venueName: string;
+      venuePhotoUrl?: string;
+      bio?: string;
+      address: string;
+      contactPhone: string;
+      openingHours: string;
+      fields: Array<{
+        name: string;
+        rates: Array<{ dayOfWeek: number; startHour: number; endHour: number; price: number }>;
+      }>;
+    }
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const profile = await tx.venueOwnerProfile.upsert({
+        where: { userId },
+        update: {
+          venueName: data.venueName,
+          venuePhotoUrl: data.venuePhotoUrl,
+          bio: data.bio,
+          address: data.address,
+          contactPhone: data.contactPhone,
+          openingHours: data.openingHours
+        },
+        create: {
+          userId,
+          venueName: data.venueName,
+          venuePhotoUrl: data.venuePhotoUrl,
+          bio: data.bio,
+          address: data.address,
+          contactPhone: data.contactPhone,
+          openingHours: data.openingHours
+        }
+      });
+
+      await tx.venueFieldRate.deleteMany({ where: { field: { profileId: profile.id } } });
+      await tx.venueField.deleteMany({ where: { profileId: profile.id } });
+
+      for (const field of data.fields) {
+        const createdField = await tx.venueField.create({
+          data: { profileId: profile.id, name: field.name }
+        });
+        for (const rate of field.rates) {
+          await tx.venueFieldRate.create({
+            data: {
+              fieldId: createdField.id,
+              dayOfWeek: rate.dayOfWeek,
+              startHour: rate.startHour,
+              endHour: rate.endHour,
+              price: rate.price
+            }
+          });
+        }
+      }
+
+      return tx.venueOwnerProfile.findUnique({
+        where: { id: profile.id },
+        include: { fields: { include: { rates: true } } }
+      });
+    });
+  }
+
+  getVenueOwnerProfile(userId: string) {
+    return this.prisma.venueOwnerProfile.findUnique({
+      where: { userId },
+      include: { fields: { include: { rates: true } } }
+    });
+  }
+
+  upsertRefereeVerification(userId: string, documentUrl: string) {
+    return this.prisma.refereeVerification.upsert({
+      where: { userId },
+      update: { documentUrl, verificationStatus: 'PENDING', notes: null },
+      create: { userId, documentUrl, verificationStatus: 'PENDING' }
+    });
+  }
+
+  getRefereeAssignments(userId: string) {
+    return this.prisma.matchRefereeAssignment.findMany({
+      where: { refereeId: userId },
+      orderBy: { scheduledAt: 'asc' },
+      include: {
+        match: {
+          include: {
+            homeTeam: { select: { id: true, name: true } },
+            awayTeam: { select: { id: true, name: true } }
+          }
+        }
       }
     });
   }
