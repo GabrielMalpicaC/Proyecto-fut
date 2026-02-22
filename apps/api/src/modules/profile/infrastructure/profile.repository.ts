@@ -15,8 +15,58 @@ export class ProfileRepository {
         avatarUrl: true,
         bio: true,
         preferredPositions: true,
+        teamMemberships: {
+          where: { status: 'ACTIVE' },
+          take: 1,
+          select: {
+            role: true,
+            team: {
+              select: {
+                id: true,
+                name: true,
+                maxPlayers: true,
+                isRecruiting: true,
+                footballType: true,
+                formation: true,
+                shieldUrl: true
+              }
+            }
+          }
+        },
         posts: { orderBy: { createdAt: 'desc' }, take: 30 },
         stories: { orderBy: { createdAt: 'desc' }, take: 20 }
+      }
+    });
+  }
+
+
+  getPublicProfile(userId: string) {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        fullName: true,
+        avatarUrl: true,
+        bio: true,
+        preferredPositions: true,
+        teamMemberships: {
+          where: { status: 'ACTIVE' },
+          take: 1,
+          select: {
+            role: true,
+            team: {
+              select: {
+                id: true,
+                name: true,
+                shieldUrl: true,
+                footballType: true,
+                formation: true
+              }
+            }
+          }
+        },
+        posts: { orderBy: { createdAt: 'desc' }, take: 15 },
+        stories: { orderBy: { createdAt: 'desc' }, take: 10 }
       }
     });
   }
@@ -43,23 +93,25 @@ export class ProfileRepository {
 
     await this.prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "Post" (
-        "id" UUID PRIMARY KEY,
-        "userId" UUID NOT NULL,
+        "id" TEXT NOT NULL,
+        "userId" TEXT NOT NULL,
         "content" TEXT NOT NULL,
         "imageUrl" TEXT,
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "Post_pkey" PRIMARY KEY ("id"),
         CONSTRAINT "Post_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
       )
     `);
 
     await this.prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "Story" (
-        "id" UUID PRIMARY KEY,
-        "userId" UUID NOT NULL,
+        "id" TEXT NOT NULL,
+        "userId" TEXT NOT NULL,
         "mediaUrl" TEXT NOT NULL,
         "caption" TEXT,
         "isHighlighted" BOOLEAN NOT NULL DEFAULT false,
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "Story_pkey" PRIMARY KEY ("id"),
         CONSTRAINT "Story_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
       )
     `);
