@@ -38,10 +38,34 @@ export class ProfileService {
           preferredPositions: [],
           stories: [],
           highlightedStories: [],
-          posts: []
+          posts: [],
+          currentTeam: null,
+          isFreeAgent: true
         };
       }
     }
+  }
+
+
+  async getUserProfile(userId: string) {
+    return this.withSchemaRecovery(async () => {
+      const profile = await this.profileRepository.getPublicProfile(userId);
+      if (!profile) throw new AppError('PROFILE_NOT_FOUND', 'Profile not found', 404);
+
+      const currentMembership = profile.teamMemberships?.[0];
+      return {
+        ...profile,
+        currentTeam: currentMembership
+          ? {
+              role: currentMembership.role,
+              ...currentMembership.team
+            }
+          : null,
+        highlightedStories: profile.stories.filter(
+          (story: { isHighlighted: boolean }) => story.isHighlighted
+        )
+      };
+    });
   }
 
   async getFeed() {
@@ -102,8 +126,17 @@ export class ProfileService {
     const profile = await this.profileRepository.getProfile(userId);
     if (!profile) throw new AppError('PROFILE_NOT_FOUND', 'Profile not found', 404);
 
+    const currentMembership = profile.teamMemberships?.[0];
+
     return {
       ...profile,
+      currentTeam: currentMembership
+        ? {
+            role: currentMembership.role,
+            ...currentMembership.team
+          }
+        : null,
+      isFreeAgent: !currentMembership,
       highlightedStories: profile.stories.filter(
         (story: { isHighlighted: boolean }) => story.isHighlighted
       )

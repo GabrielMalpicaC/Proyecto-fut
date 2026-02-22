@@ -44,6 +44,11 @@ const createPostSchema = z.object({
 export class ProfileController {
   constructor(private readonly profileService: ProfileService) {}
 
+  @Get('users/:userId')
+  userProfile(@Param('userId') userId: string) {
+    return this.profileService.getUserProfile(userId);
+  }
+
   @Get('me')
   me(@Req() req: Express.Request) {
     return this.profileService.getMe(req.user!.sub);

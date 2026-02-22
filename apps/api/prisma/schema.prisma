@@ -46,6 +46,7 @@ model User {
   teamsOwned     Team[]          @relation("TeamOwner")
   teamMemberships TeamMember[]
   teamInvitations TeamInvitation[] @relation("InvitedUser")
+  teamApplications TeamApplication[]
   venues         Venue[]
   bookings       Booking[]       @relation("BookingUser")
   ownedBookings  Booking[]       @relation("BookingOwner")
@@ -94,13 +95,29 @@ model RefreshToken {
 }
 
 model Team {
-  id          String           @id @default(uuid())
-  name        String
-  ownerId     String
-  owner       User             @relation("TeamOwner", fields: [ownerId], references: [id])
-  members     TeamMember[]
-  invitations TeamInvitation[]
-  createdAt   DateTime         @default(now())
+  id            String            @id @default(uuid())
+  name          String
+  ownerId       String
+  description   String?
+  shieldUrl     String?
+  footballType  Int               @default(11)
+  formation     String            @default("4-4-2")
+  maxPlayers    Int
+  isRecruiting  Boolean           @default(true)
+  matchesPlayed Int               @default(0)
+  wins          Int               @default(0)
+  draws         Int               @default(0)
+  losses        Int               @default(0)
+  goalsFor      Int               @default(0)
+  goalsAgainst  Int               @default(0)
+  owner         User              @relation("TeamOwner", fields: [ownerId], references: [id])
+  members       TeamMember[]
+  invitations   TeamInvitation[]
+  applications  TeamApplication[]
+  homeMatches   Match[]           @relation("HomeTeam")
+  awayMatches   Match[]           @relation("AwayTeam")
+  queueEntries  MatchQueue[]
+  createdAt     DateTime          @default(now())
 }
 
 model TeamMember {
@@ -108,6 +125,13 @@ model TeamMember {
   teamId   String
   userId   String
   status   String
+  role     String   @default("MEMBER")
+  matchesPlayed Int  @default(0)
+  goals         Int  @default(0)
+  assists       Int  @default(0)
+  yellowCards   Int  @default(0)
+  redCards      Int  @default(0)
+  cleanSheets   Int  @default(0)
   team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -124,6 +148,70 @@ model TeamInvitation {
   invitedUser  User     @relation("InvitedUser", fields: [invitedUserId], references: [id], onDelete: Cascade)
 
   @@unique([teamId, invitedUserId])
+}
+
+
+model TeamApplication {
+  id        String   @id @default(uuid())
+  teamId     String
+  userId     String
+  message    String?
+  status     String   @default("PENDING")
+  createdAt  DateTime @default(now())
+  reviewedAt DateTime?
+  team       Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([teamId, status])
+}
+
+enum MatchMode {
+  CASUAL
+  COMPETITIVE
+}
+
+enum MatchStatus {
+  SCHEDULED
+  IN_PROGRESS
+  FINISHED
+  CANCELED
+}
+
+enum MatchQueueStatus {
+  SEARCHING
+  MATCHED
+  CANCELED
+}
+
+model Match {
+  id          String      @id @default(uuid())
+  mode        MatchMode
+  status      MatchStatus @default(SCHEDULED)
+  homeTeamId  String
+  awayTeamId  String
+  createdAt   DateTime    @default(now())
+  matchedAt   DateTime?
+  homeTeam    Team        @relation("HomeTeam", fields: [homeTeamId], references: [id], onDelete: Cascade)
+  awayTeam    Team        @relation("AwayTeam", fields: [awayTeamId], references: [id], onDelete: Cascade)
+  queueEntries MatchQueue[]
+
+  @@index([mode, status, createdAt])
+}
+
+model MatchQueue {
+  id         String           @id @default(uuid())
+  teamId     String
+  mode       MatchMode
+  status     MatchQueueStatus @default(SEARCHING)
+  createdAt  DateTime         @default(now())
+  matchedAt  DateTime?
+  matchId    String?
+  team       Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  match      Match?           @relation(fields: [matchId], references: [id], onDelete: SetNull)
+
+  @@index([mode, status, createdAt])
+  @@unique([teamId, mode, status])
 }
 
 model Venue {
