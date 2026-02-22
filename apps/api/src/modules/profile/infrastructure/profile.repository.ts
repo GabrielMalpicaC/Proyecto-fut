@@ -43,23 +43,25 @@ export class ProfileRepository {
 
     await this.prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "Post" (
-        "id" UUID PRIMARY KEY,
-        "userId" UUID NOT NULL,
+        "id" TEXT NOT NULL,
+        "userId" TEXT NOT NULL,
         "content" TEXT NOT NULL,
         "imageUrl" TEXT,
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "Post_pkey" PRIMARY KEY ("id"),
         CONSTRAINT "Post_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
       )
     `);
 
     await this.prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "Story" (
-        "id" UUID PRIMARY KEY,
-        "userId" UUID NOT NULL,
+        "id" TEXT NOT NULL,
+        "userId" TEXT NOT NULL,
         "mediaUrl" TEXT NOT NULL,
         "caption" TEXT,
         "isHighlighted" BOOLEAN NOT NULL DEFAULT false,
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "Story_pkey" PRIMARY KEY ("id"),
         CONSTRAINT "Story_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
       )
     `);
