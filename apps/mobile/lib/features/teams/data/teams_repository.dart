@@ -36,6 +36,11 @@ class TeamsRepository {
     return res.data ?? {};
   }
 
+  Future<Map<String, dynamic>> getUserProfile(String userId) async {
+    final res = await _apiClient.dio.get<Map<String, dynamic>>('/profile/users/$userId');
+    return res.data ?? {};
+  }
+
   Future<void> updateTeam({
     required String teamId,
     String? name,
@@ -53,6 +58,21 @@ class TeamsRepository {
       if (shieldUrl != null && shieldUrl.isNotEmpty) 'shieldUrl': shieldUrl,
       if (isRecruiting != null) 'isRecruiting': isRecruiting,
     });
+  }
+
+  Future<void> updateMemberRole({
+    required String teamId,
+    required String memberUserId,
+    required String role,
+  }) async {
+    await _apiClient.dio.patch('/teams/$teamId/members/$memberUserId/role', data: {'role': role});
+  }
+
+  Future<void> removeMember({
+    required String teamId,
+    required String memberUserId,
+  }) async {
+    await _apiClient.dio.patch('/teams/$teamId/members/$memberUserId/remove');
   }
 
   Future<void> applyToTeam({required String teamId, String? message}) async {

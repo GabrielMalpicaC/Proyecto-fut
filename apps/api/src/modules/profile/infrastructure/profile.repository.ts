@@ -39,6 +39,38 @@ export class ProfileRepository {
     });
   }
 
+
+  getPublicProfile(userId: string) {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        fullName: true,
+        avatarUrl: true,
+        bio: true,
+        preferredPositions: true,
+        teamMemberships: {
+          where: { status: 'ACTIVE' },
+          take: 1,
+          select: {
+            role: true,
+            team: {
+              select: {
+                id: true,
+                name: true,
+                shieldUrl: true,
+                footballType: true,
+                formation: true
+              }
+            }
+          }
+        },
+        posts: { orderBy: { createdAt: 'desc' }, take: 15 },
+        stories: { orderBy: { createdAt: 'desc' }, take: 10 }
+      }
+    });
+  }
+
   getLegacyProfile(userId: string) {
     return this.prisma.user.findUnique({
       where: { id: userId },

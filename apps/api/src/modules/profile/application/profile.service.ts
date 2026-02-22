@@ -46,6 +46,28 @@ export class ProfileService {
     }
   }
 
+
+  async getUserProfile(userId: string) {
+    return this.withSchemaRecovery(async () => {
+      const profile = await this.profileRepository.getPublicProfile(userId);
+      if (!profile) throw new AppError('PROFILE_NOT_FOUND', 'Profile not found', 404);
+
+      const currentMembership = profile.teamMemberships?.[0];
+      return {
+        ...profile,
+        currentTeam: currentMembership
+          ? {
+              role: currentMembership.role,
+              ...currentMembership.team
+            }
+          : null,
+        highlightedStories: profile.stories.filter(
+          (story: { isHighlighted: boolean }) => story.isHighlighted
+        )
+      };
+    });
+  }
+
   async getFeed() {
     try {
       return await this.profileRepository.getCommunityFeed();

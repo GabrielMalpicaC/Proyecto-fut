@@ -9,6 +9,10 @@ export class TeamsService {
 
   constructor(private readonly teamsRepository: TeamsRepository) {}
 
+  private canManageTeam(role: string) {
+    return role === 'LEADER' || role === 'CO_LEADER';
+  }
+
   async createTeam(
     ownerId: string,
     input: {
@@ -36,10 +40,14 @@ export class TeamsService {
     });
   }
 
-  inviteMember(teamId: string, input: { invitedUserId: string }) {
-    return this.withSchemaGuard(() =>
-      this.teamsRepository.createInvitation(teamId, input.invitedUserId)
-    );
+  async inviteMember(teamId: string, requesterId: string, input: { invitedUserId: string }) {
+    return this.withSchemaGuard(async () => {
+      const requesterMembership = await this.teamsRepository.getActiveMember(teamId, requesterId);
+      if (!requesterMembership || !this.canManageTeam(requesterMembership.role)) {
+        throw new AppError('FORBIDDEN', 'Solo líder/colíder pueden invitar jugadores', 403);
+      }
+      return this.teamsRepository.createInvitation(teamId, input.invitedUserId);
+    });
   }
 
   acceptInvite(teamId: string, userId: string) {
@@ -125,8 +133,9 @@ export class TeamsService {
     return this.withSchemaGuard(async () => {
       const team = await this.teamsRepository.getTeamById(teamId);
       if (!team) throw new AppError('TEAM_NOT_FOUND', 'Equipo no encontrado', 404);
-      if (team.ownerId !== requesterId) {
-        throw new AppError('FORBIDDEN', 'Solo el líder puede ver postulaciones', 403);
+      const requesterMembership = await this.teamsRepository.getActiveMember(teamId, requesterId);
+      if (!requesterMembership || !this.canManageTeam(requesterMembership.role)) {
+        throw new AppError('FORBIDDEN', 'Solo líder/colíder pueden ver postulaciones', 403);
       }
       return this.teamsRepository.listApplications(teamId);
     });
@@ -141,8 +150,9 @@ export class TeamsService {
     return this.withSchemaGuard(async () => {
       const team = await this.teamsRepository.getTeamById(teamId);
       if (!team) throw new AppError('TEAM_NOT_FOUND', 'Equipo no encontrado', 404);
-      if (team.ownerId !== requesterId) {
-        throw new AppError('FORBIDDEN', 'Solo el líder puede revisar postulaciones', 403);
+      const requesterMembership = await this.teamsRepository.getActiveMember(teamId, requesterId);
+      if (!requesterMembership || !this.canManageTeam(requesterMembership.role)) {
+        throw new AppError('FORBIDDEN', 'Solo líder/colíder pueden revisar postulaciones', 403);
       }
 
       if (approve) {
@@ -153,6 +163,55 @@ export class TeamsService {
       }
 
       return this.teamsRepository.reviewApplication(teamId, applicantUserId, approve);
+    });
+  }
+
+
+  async assignMemberRole(
+    teamId: string,
+    requesterId: string,
+    targetUserId: string,
+    role: 'CAPTAIN' | 'CO_LEADER' | 'MEMBER'
+  ) {
+    return this.withSchemaGuard(async () => {
+      const requesterMembership = await this.teamsRepository.getActiveMember(teamId, requesterId);
+      if (!requesterMembership) throw new AppError('FORBIDDEN', 'No perteneces a este equipo', 403);
+      if (requesterMembership.role !== 'LEADER') {
+        throw new AppError('FORBIDDEN', 'Solo el líder puede asignar roles', 403);
+      }
+
+      const targetMembership = await this.teamsRepository.getActiveMember(teamId, targetUserId);
+      if (!targetMembership) {
+        throw new AppError('TEAM_MEMBER_NOT_FOUND', 'Jugador no pertenece al equipo', 404);
+      }
+      if (targetMembership.role === 'LEADER') {
+        throw new AppError('INVALID_ROLE_CHANGE', 'No puedes cambiar el rol del líder', 409);
+      }
+
+      return this.teamsRepository.updateMemberRole(teamId, targetUserId, role);
+    });
+  }
+
+  async removeMember(teamId: string, requesterId: string, targetUserId: string) {
+    return this.withSchemaGuard(async () => {
+      const requesterMembership = await this.teamsRepository.getActiveMember(teamId, requesterId);
+      if (!requesterMembership) throw new AppError('FORBIDDEN', 'No perteneces a este equipo', 403);
+      if (!this.canManageTeam(requesterMembership.role)) {
+        throw new AppError('FORBIDDEN', 'Solo líder/colíder pueden expulsar jugadores', 403);
+      }
+
+      const targetMembership = await this.teamsRepository.getActiveMember(teamId, targetUserId);
+      if (!targetMembership) {
+        throw new AppError('TEAM_MEMBER_NOT_FOUND', 'Jugador no pertenece al equipo', 404);
+      }
+      if (targetMembership.role === 'LEADER') {
+        throw new AppError('FORBIDDEN', 'No puedes expulsar al líder', 403);
+      }
+      if (targetUserId === requesterId) {
+        throw new AppError('FORBIDDEN', 'No puedes expulsarte a ti mismo', 403);
+      }
+
+      return this.teamsRepository.removeMember(teamId, targetUserId);
     });
   }
 

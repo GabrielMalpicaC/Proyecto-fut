@@ -24,6 +24,7 @@ const updateTeamSchema = z.object({
 const inviteSchema = z.object({ invitedUserId: z.string().uuid() });
 const applySchema = z.object({ message: z.string().max(300).optional() });
 const reviewApplicationSchema = z.object({ approve: z.boolean() });
+const updateMemberRoleSchema = z.object({ role: z.enum(['MEMBER', 'CAPTAIN', 'CO_LEADER']) });
 
 @Controller('teams')
 @UseGuards(JwtAuthGuard)
@@ -63,8 +64,12 @@ export class TeamsController {
 
   @Post(':teamId/invite')
   @UsePipes(new ZodValidationPipe(inviteSchema))
-  invite(@Param('teamId') teamId: string, @Body() body: z.infer<typeof inviteSchema>) {
-    return this.teamsService.inviteMember(teamId, body);
+  invite(
+    @Req() req: Express.Request,
+    @Param('teamId') teamId: string,
+    @Body() body: z.infer<typeof inviteSchema>
+  ) {
+    return this.teamsService.inviteMember(teamId, req.user!.sub, body);
   }
 
   @Post(':teamId/accept')
@@ -85,6 +90,27 @@ export class TeamsController {
   @Get(':teamId/applications')
   applications(@Req() req: Express.Request, @Param('teamId') teamId: string) {
     return this.teamsService.listApplications(teamId, req.user!.sub);
+  }
+
+
+  @Patch(':teamId/members/:memberUserId/role')
+  @UsePipes(new ZodValidationPipe(updateMemberRoleSchema))
+  setMemberRole(
+    @Req() req: Express.Request,
+    @Param('teamId') teamId: string,
+    @Param('memberUserId') memberUserId: string,
+    @Body() body: z.infer<typeof updateMemberRoleSchema>
+  ) {
+    return this.teamsService.assignMemberRole(teamId, req.user!.sub, memberUserId, body.role);
+  }
+
+  @Patch(':teamId/members/:memberUserId/remove')
+  removeMember(
+    @Req() req: Express.Request,
+    @Param('teamId') teamId: string,
+    @Param('memberUserId') memberUserId: string
+  ) {
+    return this.teamsService.removeMember(teamId, req.user!.sub, memberUserId);
   }
 
   @Patch(':teamId/applications/:applicantUserId')

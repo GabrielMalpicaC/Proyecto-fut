@@ -57,9 +57,15 @@ export class TeamsRepository {
         owner: { select: { id: true, fullName: true, avatarUrl: true } },
         members: {
           where: { status: 'ACTIVE' },
-          orderBy: { role: 'asc' },
+          orderBy: [{ role: 'asc' }, { user: { fullName: 'asc' } }],
           select: {
             role: true,
+            matchesPlayed: true,
+            goals: true,
+            assists: true,
+            yellowCards: true,
+            redCards: true,
+            cleanSheets: true,
             user: {
               select: { id: true, fullName: true, avatarUrl: true, preferredPositions: true }
             }
@@ -140,6 +146,49 @@ export class TeamsRepository {
         status: approve ? 'ACCEPTED' : 'REJECTED',
         reviewedAt: new Date()
       }
+    });
+
+    if (!approve) return { ok: true };
+
+    await this.prisma.teamMember.upsert({
+      where: { teamId_userId: { teamId, userId: applicantUserId } },
+      update: { status: 'ACTIVE', role: 'MEMBER' },
+      create: { teamId, userId: applicantUserId, status: 'ACTIVE', role: 'MEMBER' }
+    });
+
+    return { ok: true };
+  }
+
+  getUserActiveMembership(userId: string) {
+    return this.prisma.teamMember.findFirst({
+      where: { userId, status: 'ACTIVE' },
+      include: { team: true }
+    });
+  }
+
+  getActiveMembersCount(teamId: string) {
+    return this.prisma.teamMember.count({ where: { teamId, status: 'ACTIVE' } });
+  }
+
+  getTeamById(teamId: string) {
+    return this.prisma.team.findUnique({ where: { id: teamId } });
+  }
+
+  getActiveMember(teamId: string, userId: string) {
+    return this.prisma.teamMember.findFirst({ where: { teamId, userId, status: 'ACTIVE' } });
+  }
+
+  updateMemberRole(teamId: string, userId: string, role: string) {
+    return this.prisma.teamMember.update({
+      where: { teamId_userId: { teamId, userId } },
+      data: { role }
+    });
+  }
+
+  removeMember(teamId: string, userId: string) {
+    return this.prisma.teamMember.update({
+      where: { teamId_userId: { teamId, userId } },
+      data: { status: 'REMOVED' }
     });
 
     if (!approve) return { ok: true };

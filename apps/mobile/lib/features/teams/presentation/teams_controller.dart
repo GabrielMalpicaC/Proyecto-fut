@@ -10,6 +10,7 @@ class TeamsController extends ChangeNotifier {
   List<dynamic> openTeams = [];
   Map<String, dynamic>? selectedTeam;
   Map<String, dynamic>? myTeam;
+  Map<String, dynamic>? selectedPlayerProfile;
 
   Future<void> loadOpenTeams() => _guard(
         () async {
@@ -69,6 +70,36 @@ class TeamsController extends ChangeNotifier {
 
   Future<void> applyToTeam({required String teamId, String? message}) =>
       _guard(() => _repository.applyToTeam(teamId: teamId, message: message));
+
+
+  Future<void> loadPlayerProfile(String userId) => _guard(() async {
+        selectedPlayerProfile = await _repository.getUserProfile(userId);
+      });
+
+  Future<void> setMemberRole({
+    required String teamId,
+    required String memberUserId,
+    required String role,
+  }) =>
+      _guard(
+        () => _repository.updateMemberRole(
+          teamId: teamId,
+          memberUserId: memberUserId,
+          role: role,
+        ),
+      );
+
+  Future<void> kickMember({
+    required String teamId,
+    required String memberUserId,
+  }) =>
+      _guard(
+        () => _repository.removeMember(
+          teamId: teamId,
+          memberUserId: memberUserId,
+        ),
+      );
+
 
   Future<void> _guard(
     Future<void> Function() action, {

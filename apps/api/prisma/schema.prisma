@@ -104,6 +104,12 @@ model Team {
   formation     String            @default("4-4-2")
   maxPlayers    Int
   isRecruiting  Boolean           @default(true)
+  matchesPlayed Int               @default(0)
+  wins          Int               @default(0)
+  draws         Int               @default(0)
+  losses        Int               @default(0)
+  goalsFor      Int               @default(0)
+  goalsAgainst  Int               @default(0)
   owner         User              @relation("TeamOwner", fields: [ownerId], references: [id])
   members       TeamMember[]
   invitations   TeamInvitation[]
@@ -117,6 +123,12 @@ model TeamMember {
   userId   String
   status   String
   role     String   @default("MEMBER")
+  matchesPlayed Int  @default(0)
+  goals         Int  @default(0)
+  assists       Int  @default(0)
+  yellowCards   Int  @default(0)
+  redCards      Int  @default(0)
+  cleanSheets   Int  @default(0)
   team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
