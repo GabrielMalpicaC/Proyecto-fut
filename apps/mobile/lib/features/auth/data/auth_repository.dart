@@ -13,6 +13,7 @@ class AuthRepository {
     required String email,
     required String fullName,
     required String password,
+    required String role,
   }) async {
     final res = await _apiClient.dio.post<Map<String, dynamic>>(
       '/auth/register',
@@ -20,6 +21,7 @@ class AuthRepository {
         'email': email,
         'fullName': fullName,
         'password': password,
+        'roles': [role],
       },
     );
     await _saveTokens(res.data);

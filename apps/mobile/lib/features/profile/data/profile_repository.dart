@@ -55,6 +55,41 @@ class ProfileRepository {
     });
   }
 
+
+  Future<Map<String, dynamic>> getVenueOwnerProfile() async {
+    final res = await _apiClient.dio.get<Map<String, dynamic>>('/profile/venue-owner/me');
+    return res.data ?? {};
+  }
+
+  Future<void> upsertVenueOwnerProfile({
+    required String venueName,
+    String? venuePhotoUrl,
+    String? bio,
+    required String address,
+    required String contactPhone,
+    required String openingHours,
+    required List<Map<String, dynamic>> fields,
+  }) async {
+    await _apiClient.dio.patch('/profile/venue-owner/me', data: {
+      'venueName': venueName,
+      if (venuePhotoUrl != null && venuePhotoUrl.isNotEmpty) 'venuePhotoUrl': venuePhotoUrl,
+      if (bio != null) 'bio': bio,
+      'address': address,
+      'contactPhone': contactPhone,
+      'openingHours': openingHours,
+      'fields': fields,
+    });
+  }
+
+  Future<void> submitRefereeVerification(String documentUrl) async {
+    await _apiClient.dio.post('/profile/referee/verification', data: {'documentUrl': documentUrl});
+  }
+
+  Future<List<dynamic>> getRefereeAssignments() async {
+    final res = await _apiClient.dio.get<List<dynamic>>('/profile/referee/assignments');
+    return res.data ?? [];
+  }
+
   Future<void> createPost({required String content, String? imageUrl}) async {
     await _apiClient.dio.post('/profile/posts', data: {
       'content': content,
