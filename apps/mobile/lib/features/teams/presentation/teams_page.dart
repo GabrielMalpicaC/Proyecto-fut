@@ -1,8 +1,11 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:proyecto_fut_app/core/widgets/app_scaffold.dart';
+import 'package:proyecto_fut_app/features/auth/presentation/auth_controller.dart';
 import 'package:proyecto_fut_app/features/profile/presentation/profile_controller.dart';
 import 'package:proyecto_fut_app/features/teams/presentation/teams_controller.dart';
+import 'package:proyecto_fut_app/shared/models/api_error.dart';
 import 'package:proyecto_fut_app/shared/utils/snackbar.dart';
 
 class TeamsPage extends StatefulWidget {
@@ -157,7 +160,7 @@ class _TeamsPageState extends State<TeamsPage> {
                   showMessage(context, 'Postulación enviada');
                 } catch (e) {
                   if (!context.mounted) return;
-                  showMessage(context, e.toString(), error: true);
+                  showMessage(context, _toReadableError(e), error: true);
                 }
               },
               child: const Text('Enviar postulación'),
@@ -239,7 +242,7 @@ class _TeamsPageState extends State<TeamsPage> {
       );
     } catch (e) {
       if (!context.mounted) return;
-      showMessage(context, e.toString(), error: true);
+      showMessage(context, _toReadableError(e), error: true);
     }
   }
 
@@ -288,7 +291,7 @@ class _TeamsPageState extends State<TeamsPage> {
                 ),
                 TextField(
                   controller: formationCtrl,
-                  decoration: const InputDecoration(labelText: 'Formación (ej: 4-4-2)'),
+                  decoration: const InputDecoration(labelText: 'Formación (opcional, ej: 4-4-2)'),
                 ),
                 const SizedBox(height: 8),
                 Align(
@@ -302,7 +305,7 @@ class _TeamsPageState extends State<TeamsPage> {
                       await context.read<TeamsController>().createTeam(
                             name: nameCtrl.text.trim(),
                             footballType: footballType,
-                            formation: formationCtrl.text.trim(),
+                            formation: formationCtrl.text.trim().isEmpty ? '4-4-2' : formationCtrl.text.trim(),
                             description: descriptionCtrl.text.trim(),
                             shieldUrl: shieldCtrl.text.trim(),
                           );
@@ -313,7 +316,7 @@ class _TeamsPageState extends State<TeamsPage> {
                       showMessage(context, 'Equipo creado correctamente');
                     } catch (e) {
                       if (!context.mounted) return;
-                      showMessage(context, e.toString(), error: true);
+                      showMessage(context, _toReadableError(e), error: true);
                     }
                   },
                   icon: const Icon(Icons.add),
@@ -325,6 +328,30 @@ class _TeamsPageState extends State<TeamsPage> {
         },
       ),
     );
+  }
+
+
+  String _toReadableError(Object error) {
+    if (error is DioException) {
+      final base = error.error;
+      if (base is ApiError) {
+        if (base.code == 'UNAUTHORIZED') {
+          if (mounted) {
+            context.read<AuthController>().logout();
+          }
+        }
+        return base.message;
+      }
+
+      final data = error.response?.data;
+      if (data is Map<String, dynamic>) {
+        final message = data['message']?.toString();
+        if (message != null && message.isNotEmpty) return message;
+      }
+      return 'No se pudo completar la operación.';
+    }
+
+    return 'Ocurrió un error inesperado.';
   }
 }
 

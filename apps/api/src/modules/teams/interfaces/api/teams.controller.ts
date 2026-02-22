@@ -7,7 +7,7 @@ import { TeamsService } from '../../application/teams.service';
 const createTeamSchema = z.object({
   name: z.string().min(3),
   footballType: z.number().int().min(5).max(11),
-  formation: z.string().min(3).max(20),
+  formation: z.string().min(3).max(20).optional(),
   description: z.string().max(500).optional(),
   shieldUrl: z.string().url().optional()
 });
