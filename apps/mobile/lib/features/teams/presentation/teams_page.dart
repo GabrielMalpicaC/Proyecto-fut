@@ -62,6 +62,14 @@ class _TeamsPageState extends State<TeamsPage> {
             ),
           ),
           const SizedBox(height: 10),
+          if (teamsCtrl.error != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                teamsCtrl.error!,
+                style: const TextStyle(color: Colors.redAccent),
+              ),
+            ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
