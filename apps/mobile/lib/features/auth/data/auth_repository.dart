@@ -21,6 +21,7 @@ class AuthRepository {
         'email': email,
         'fullName': fullName,
         'password': password,
+        'role': role,
         'roles': [role],
       },
     );

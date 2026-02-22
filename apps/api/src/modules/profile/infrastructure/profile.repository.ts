@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '@/infrastructure/prisma/prisma.service';
 
 @Injectable()
@@ -89,7 +90,7 @@ export class ProfileRepository {
       }>;
     }
   ) {
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const profile = await tx.venueOwnerProfile.upsert({
         where: { userId },
         update: {

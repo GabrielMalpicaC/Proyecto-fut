@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '@/infrastructure/prisma/prisma.service';
 
 @Injectable()
@@ -13,7 +14,7 @@ export class MatchesRepository {
   }
 
   async createQueueAndTryMatch(teamId: string, mode: 'CASUAL' | 'COMPETITIVE') {
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const alreadySearching = await tx.matchQueue.findFirst({
         where: { teamId, mode, status: 'SEARCHING' }
       });
