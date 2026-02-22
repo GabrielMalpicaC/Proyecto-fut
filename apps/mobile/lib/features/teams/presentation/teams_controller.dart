@@ -9,6 +9,7 @@ class TeamsController extends ChangeNotifier {
   String? error;
   List<dynamic> openTeams = [];
   Map<String, dynamic>? selectedTeam;
+  Map<String, dynamic>? myTeam;
 
   Future<void> loadOpenTeams() => _guard(
         () async {
@@ -17,11 +18,16 @@ class TeamsController extends ChangeNotifier {
         rethrowError: false,
       );
 
-  Future<void> loadTeamProfile(String teamId) => _guard(
+  Future<void> loadMyTeam() => _guard(
         () async {
-          selectedTeam = await _repository.getTeamProfile(teamId);
+          myTeam = await _repository.getMyTeam();
         },
+        rethrowError: false,
       );
+
+  Future<void> loadTeamProfile(String teamId) => _guard(() async {
+        selectedTeam = await _repository.getTeamProfile(teamId);
+      });
 
   Future<void> createTeam({
     required String name,
@@ -37,6 +43,27 @@ class TeamsController extends ChangeNotifier {
           formation: formation,
           description: description,
           shieldUrl: shieldUrl,
+        ),
+      );
+
+  Future<void> updateTeam({
+    required String teamId,
+    String? name,
+    String? description,
+    String? formation,
+    int? footballType,
+    String? shieldUrl,
+    bool? isRecruiting,
+  }) =>
+      _guard(
+        () => _repository.updateTeam(
+          teamId: teamId,
+          name: name,
+          description: description,
+          formation: formation,
+          footballType: footballType,
+          shieldUrl: shieldUrl,
+          isRecruiting: isRecruiting,
         ),
       );
 

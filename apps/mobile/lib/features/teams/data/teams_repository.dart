@@ -26,9 +26,33 @@ class TeamsRepository {
     return res.data ?? [];
   }
 
+  Future<Map<String, dynamic>> getMyTeam() async {
+    final res = await _apiClient.dio.get<Map<String, dynamic>>('/teams/me');
+    return res.data ?? {};
+  }
+
   Future<Map<String, dynamic>> getTeamProfile(String teamId) async {
     final res = await _apiClient.dio.get<Map<String, dynamic>>('/teams/$teamId');
     return res.data ?? {};
+  }
+
+  Future<void> updateTeam({
+    required String teamId,
+    String? name,
+    String? description,
+    String? formation,
+    int? footballType,
+    String? shieldUrl,
+    bool? isRecruiting,
+  }) async {
+    await _apiClient.dio.patch('/teams/$teamId', data: {
+      if (name != null && name.isNotEmpty) 'name': name,
+      if (description != null) 'description': description,
+      if (formation != null && formation.isNotEmpty) 'formation': formation,
+      if (footballType != null) 'footballType': footballType,
+      if (shieldUrl != null && shieldUrl.isNotEmpty) 'shieldUrl': shieldUrl,
+      if (isRecruiting != null) 'isRecruiting': isRecruiting,
+    });
   }
 
   Future<void> applyToTeam({required String teamId, String? message}) async {

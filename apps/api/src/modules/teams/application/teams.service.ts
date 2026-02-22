@@ -37,7 +37,9 @@ export class TeamsService {
   }
 
   inviteMember(teamId: string, input: { invitedUserId: string }) {
-    return this.withSchemaGuard(() => this.teamsRepository.createInvitation(teamId, input.invitedUserId));
+    return this.withSchemaGuard(() =>
+      this.teamsRepository.createInvitation(teamId, input.invitedUserId)
+    );
   }
 
   acceptInvite(teamId: string, userId: string) {
@@ -48,11 +50,52 @@ export class TeamsService {
     return this.withSchemaGuard(() => this.teamsRepository.getOpenTeams());
   }
 
+  async getMyTeam(userId: string) {
+    return this.withSchemaGuard(async () => {
+      const membership = await this.teamsRepository.getUserActiveMembership(userId);
+      if (!membership) throw new AppError('TEAM_NOT_FOUND', 'No perteneces a ningún equipo', 404);
+      return this.getTeamProfile(membership.teamId);
+    });
+  }
+
   async getTeamProfile(teamId: string) {
     return this.withSchemaGuard(async () => {
       const team = await this.teamsRepository.getTeamProfile(teamId);
       if (!team) throw new AppError('TEAM_NOT_FOUND', 'Equipo no encontrado', 404);
       return team;
+    });
+  }
+
+  async updateTeam(
+    teamId: string,
+    requesterId: string,
+    input: {
+      name?: string;
+      description?: string;
+      formation?: string;
+      footballType?: number;
+      shieldUrl?: string;
+      isRecruiting?: boolean;
+    }
+  ) {
+    return this.withSchemaGuard(async () => {
+      const team = await this.teamsRepository.getTeamById(teamId);
+      if (!team) throw new AppError('TEAM_NOT_FOUND', 'Equipo no encontrado', 404);
+      if (team.ownerId !== requesterId) {
+        throw new AppError('FORBIDDEN', 'Solo el líder puede editar el equipo', 403);
+      }
+
+      const footballType = input.footballType ?? team.footballType;
+
+      return this.teamsRepository.updateTeam(teamId, {
+        name: input.name,
+        description: input.description,
+        formation: input.formation,
+        footballType,
+        maxPlayers: footballType * 2,
+        shieldUrl: input.shieldUrl,
+        isRecruiting: input.isRecruiting
+      });
     });
   }
 
@@ -89,7 +132,12 @@ export class TeamsService {
     });
   }
 
-  async reviewApplication(teamId: string, requesterId: string, applicantUserId: string, approve: boolean) {
+  async reviewApplication(
+    teamId: string,
+    requesterId: string,
+    applicantUserId: string,
+    approve: boolean
+  ) {
     return this.withSchemaGuard(async () => {
       const team = await this.teamsRepository.getTeamById(teamId);
       if (!team) throw new AppError('TEAM_NOT_FOUND', 'Equipo no encontrado', 404);

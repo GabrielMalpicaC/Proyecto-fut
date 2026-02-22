@@ -12,6 +12,15 @@ const createTeamSchema = z.object({
   shieldUrl: z.string().url().optional()
 });
 
+const updateTeamSchema = z.object({
+  name: z.string().min(3).optional(),
+  footballType: z.number().int().min(5).max(11).optional(),
+  formation: z.string().min(3).max(20).optional(),
+  description: z.string().max(500).optional(),
+  shieldUrl: z.string().url().optional(),
+  isRecruiting: z.boolean().optional()
+});
+
 const inviteSchema = z.object({ invitedUserId: z.string().uuid() });
 const applySchema = z.object({ message: z.string().max(300).optional() });
 const reviewApplicationSchema = z.object({ approve: z.boolean() });
@@ -26,6 +35,11 @@ export class TeamsController {
     return this.teamsService.listOpenTeams();
   }
 
+  @Get('me')
+  myTeam(@Req() req: Express.Request) {
+    return this.teamsService.getMyTeam(req.user!.sub);
+  }
+
   @Get(':teamId')
   getTeam(@Param('teamId') teamId: string) {
     return this.teamsService.getTeamProfile(teamId);
@@ -35,6 +49,16 @@ export class TeamsController {
   @UsePipes(new ZodValidationPipe(createTeamSchema))
   create(@Req() req: Express.Request, @Body() body: z.infer<typeof createTeamSchema>) {
     return this.teamsService.createTeam(req.user!.sub, body);
+  }
+
+  @Patch(':teamId')
+  @UsePipes(new ZodValidationPipe(updateTeamSchema))
+  update(
+    @Req() req: Express.Request,
+    @Param('teamId') teamId: string,
+    @Body() body: z.infer<typeof updateTeamSchema>
+  ) {
+    return this.teamsService.updateTeam(teamId, req.user!.sub, body);
   }
 
   @Post(':teamId/invite')
