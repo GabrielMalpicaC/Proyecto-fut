@@ -5,15 +5,35 @@ class TeamsRepository {
 
   final ApiClient _apiClient;
 
-  Future<void> createTeam(String name) async {
-    await _apiClient.dio.post('/teams', data: {'name': name});
+  Future<void> createTeam({
+    required String name,
+    required int footballType,
+    required String formation,
+    String? description,
+    String? shieldUrl,
+  }) async {
+    await _apiClient.dio.post('/teams', data: {
+      'name': name,
+      'footballType': footballType,
+      'formation': formation,
+      if (description != null && description.isNotEmpty) 'description': description,
+      if (shieldUrl != null && shieldUrl.isNotEmpty) 'shieldUrl': shieldUrl,
+    });
   }
 
-  Future<void> inviteMember({required String teamId, required String invitedUserId}) async {
-    await _apiClient.dio.post('/teams/$teamId/invite', data: {'invitedUserId': invitedUserId});
+  Future<List<dynamic>> listOpenTeams() async {
+    final res = await _apiClient.dio.get<List<dynamic>>('/teams/open');
+    return res.data ?? [];
   }
 
-  Future<void> acceptInvite({required String teamId}) async {
-    await _apiClient.dio.post('/teams/$teamId/accept');
+  Future<Map<String, dynamic>> getTeamProfile(String teamId) async {
+    final res = await _apiClient.dio.get<Map<String, dynamic>>('/teams/$teamId');
+    return res.data ?? {};
+  }
+
+  Future<void> applyToTeam({required String teamId, String? message}) async {
+    await _apiClient.dio.post('/teams/$teamId/apply', data: {
+      if (message != null && message.isNotEmpty) 'message': message,
+    });
   }
 }
