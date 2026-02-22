@@ -28,6 +28,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final profile = ctrl.profile;
     final avatarUrl = profile['avatarUrl']?.toString();
     final selectedPositions = ctrl.preferredPositions.toSet();
+    final currentTeam = profile['currentTeam'] as Map<String, dynamic>?;
 
     return AppScaffold(
       title: 'Perfil',
@@ -56,6 +57,9 @@ class _ProfilePageState extends State<ProfilePage> {
                       storiesCount: ctrl.stories.length,
                       postsCount: ctrl.posts.length,
                       highlightsCount: ctrl.highlightedStories.length,
+                      teamStatus: currentTeam == null
+                          ? 'Agente libre'
+                          : 'Equipo: ${currentTeam['name']} (${currentTeam['role']})',
                       onEdit: () => _openEditProfile(context, ctrl),
                     ),
                     const SizedBox(height: 12),
@@ -452,6 +456,7 @@ class _HeaderCard extends StatelessWidget {
     required this.storiesCount,
     required this.postsCount,
     required this.highlightsCount,
+    required this.teamStatus,
     required this.onEdit,
   });
 
@@ -462,6 +467,7 @@ class _HeaderCard extends StatelessWidget {
   final int storiesCount;
   final int postsCount;
   final int highlightsCount;
+  final String teamStatus;
   final VoidCallback onEdit;
 
   @override
@@ -494,6 +500,8 @@ class _HeaderCard extends StatelessWidget {
                     Text(fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
                     const SizedBox(height: 4),
                     Text(bio, maxLines: 2, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 4),
+                    Text(teamStatus, style: const TextStyle(fontSize: 12, color: Colors.white70)),
                   ],
                 ),
               ),
