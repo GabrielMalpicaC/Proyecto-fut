@@ -5,11 +5,19 @@ class TeamsRepository {
 
   final ApiClient _apiClient;
 
-  Future<void> createTeam({required String name, required int maxPlayers, String? description}) async {
+  Future<void> createTeam({
+    required String name,
+    required int footballType,
+    required String formation,
+    String? description,
+    String? shieldUrl,
+  }) async {
     await _apiClient.dio.post('/teams', data: {
       'name': name,
-      'maxPlayers': maxPlayers,
+      'footballType': footballType,
+      'formation': formation,
       if (description != null && description.isNotEmpty) 'description': description,
+      if (shieldUrl != null && shieldUrl.isNotEmpty) 'shieldUrl': shieldUrl,
     });
   }
 
@@ -27,13 +35,5 @@ class TeamsRepository {
     await _apiClient.dio.post('/teams/$teamId/apply', data: {
       if (message != null && message.isNotEmpty) 'message': message,
     });
-  }
-
-  Future<void> inviteMember({required String teamId, required String invitedUserId}) async {
-    await _apiClient.dio.post('/teams/$teamId/invite', data: {'invitedUserId': invitedUserId});
-  }
-
-  Future<void> acceptInvite({required String teamId}) async {
-    await _apiClient.dio.post('/teams/$teamId/accept');
   }
 }

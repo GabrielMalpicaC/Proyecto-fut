@@ -4,15 +4,33 @@ import { TeamsRepository } from '../infrastructure/teams.repository';
 
 @Injectable()
 export class TeamsService {
+  private readonly defaultShield =
+    'https://ui-avatars.com/api/?name=Team&background=1f2a44&color=ffffff&rounded=true';
+
   constructor(private readonly teamsRepository: TeamsRepository) {}
 
-  async createTeam(ownerId: string, input: { name: string; maxPlayers: number; description?: string }) {
+  async createTeam(
+    ownerId: string,
+    input: {
+      name: string;
+      footballType: number;
+      formation: string;
+      description?: string;
+      shieldUrl?: string;
+    }
+  ) {
     const existingMembership = await this.teamsRepository.getUserActiveMembership(ownerId);
     if (existingMembership) {
       throw new AppError('USER_ALREADY_IN_TEAM', 'Ya perteneces a un equipo activo', 409);
     }
 
-    return this.teamsRepository.createTeam(ownerId, input);
+    const maxPlayers = input.footballType * 2;
+
+    return this.teamsRepository.createTeam(ownerId, {
+      ...input,
+      maxPlayers,
+      shieldUrl: input.shieldUrl?.trim() || this.defaultShield
+    });
   }
 
   inviteMember(teamId: string, input: { invitedUserId: string }) {

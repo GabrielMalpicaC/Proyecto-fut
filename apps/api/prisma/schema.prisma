@@ -99,6 +99,9 @@ model Team {
   name          String
   ownerId       String
   description   String?
+  shieldUrl     String?
+  footballType  Int               @default(11)
+  formation     String            @default("4-4-2")
   maxPlayers    Int
   isRecruiting  Boolean           @default(true)
   owner         User              @relation("TeamOwner", fields: [ownerId], references: [id])

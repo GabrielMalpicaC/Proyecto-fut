@@ -5,12 +5,25 @@ import { PrismaService } from '@/infrastructure/prisma/prisma.service';
 export class TeamsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  createTeam(ownerId: string, input: { name: string; maxPlayers: number; description?: string }) {
+  createTeam(
+    ownerId: string,
+    input: {
+      name: string;
+      description?: string;
+      maxPlayers: number;
+      footballType: number;
+      formation: string;
+      shieldUrl: string;
+    }
+  ) {
     return this.prisma.team.create({
       data: {
         name: input.name,
         ownerId,
         maxPlayers: input.maxPlayers,
+        footballType: input.footballType,
+        formation: input.formation,
+        shieldUrl: input.shieldUrl,
         description: input.description,
         members: { create: { userId: ownerId, status: 'ACTIVE', role: 'LEADER' } }
       }
@@ -41,15 +54,20 @@ export class TeamsRepository {
     return this.prisma.team.findUnique({
       where: { id: teamId },
       include: {
-        owner: { select: { id: true, fullName: true } },
+        owner: { select: { id: true, fullName: true, avatarUrl: true } },
         members: {
           where: { status: 'ACTIVE' },
+          orderBy: { role: 'asc' },
           select: {
             role: true,
             user: { select: { id: true, fullName: true, avatarUrl: true, preferredPositions: true } }
           }
         },
-        _count: { select: { applications: { where: { status: 'PENDING' } } } }
+        _count: {
+          select: {
+            applications: { where: { status: 'PENDING' } }
+          }
+        }
       }
     });
   }

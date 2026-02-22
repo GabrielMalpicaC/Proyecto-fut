@@ -17,16 +17,25 @@ class TeamsController extends ChangeNotifier {
         selectedTeam = await _repository.getTeamProfile(teamId);
       });
 
-  Future<void> createTeam({required String name, required int maxPlayers, String? description}) =>
-      _guard(() => _repository.createTeam(name: name, maxPlayers: maxPlayers, description: description));
+  Future<void> createTeam({
+    required String name,
+    required int footballType,
+    required String formation,
+    String? description,
+    String? shieldUrl,
+  }) =>
+      _guard(
+        () => _repository.createTeam(
+          name: name,
+          footballType: footballType,
+          formation: formation,
+          description: description,
+          shieldUrl: shieldUrl,
+        ),
+      );
 
   Future<void> applyToTeam({required String teamId, String? message}) =>
       _guard(() => _repository.applyToTeam(teamId: teamId, message: message));
-
-  Future<void> inviteMember({required String teamId, required String invitedUserId}) =>
-      _guard(() => _repository.inviteMember(teamId: teamId, invitedUserId: invitedUserId));
-
-  Future<void> acceptInvite(String teamId) => _guard(() => _repository.acceptInvite(teamId: teamId));
 
   Future<void> _guard(Future<void> Function() action) async {
     loading = true;

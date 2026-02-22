@@ -25,7 +25,10 @@ export class ProfileRepository {
                 id: true,
                 name: true,
                 maxPlayers: true,
-                isRecruiting: true
+                isRecruiting: true,
+                footballType: true,
+                formation: true,
+                shieldUrl: true
               }
             }
           }
