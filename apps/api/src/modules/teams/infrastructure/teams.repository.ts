@@ -201,19 +201,4 @@ export class TeamsRepository {
 
     return { ok: true };
   }
-
-  getUserActiveMembership(userId: string) {
-    return this.prisma.teamMember.findFirst({
-      where: { userId, status: 'ACTIVE' },
-      include: { team: true }
-    });
-  }
-
-  getActiveMembersCount(teamId: string) {
-    return this.prisma.teamMember.count({ where: { teamId, status: 'ACTIVE' } });
-  }
-
-  getTeamById(teamId: string) {
-    return this.prisma.team.findUnique({ where: { id: teamId } });
-  }
 }
