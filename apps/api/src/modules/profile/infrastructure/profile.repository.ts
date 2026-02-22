@@ -15,6 +15,21 @@ export class ProfileRepository {
         avatarUrl: true,
         bio: true,
         preferredPositions: true,
+        teamMemberships: {
+          where: { status: 'ACTIVE' },
+          take: 1,
+          select: {
+            role: true,
+            team: {
+              select: {
+                id: true,
+                name: true,
+                maxPlayers: true,
+                isRecruiting: true
+              }
+            }
+          }
+        },
         posts: { orderBy: { createdAt: 'desc' }, take: 30 },
         stories: { orderBy: { createdAt: 'desc' }, take: 20 }
       }
