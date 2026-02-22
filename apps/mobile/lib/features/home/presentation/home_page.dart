@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:proyecto_fut_app/features/auth/presentation/auth_controller.dart';
 import 'package:proyecto_fut_app/features/bookings/presentation/bookings_page.dart';
 import 'package:proyecto_fut_app/features/profile/presentation/profile_controller.dart';
+import 'package:proyecto_fut_app/features/matches/presentation/matches_page.dart';
 import 'package:proyecto_fut_app/features/profile/presentation/profile_page.dart';
 import 'package:proyecto_fut_app/features/teams/presentation/my_team_page.dart';
 import 'package:proyecto_fut_app/features/teams/presentation/teams_page.dart';
@@ -34,6 +35,7 @@ class _HomePageState extends State<HomePage> {
       const VenuesPage(),
       const TeamsPage(),
       if (hasTeam) const MyTeamPage(),
+      const MatchesPage(),
       BookingsPage(),
       const WalletPage(),
       const ProfilePage(),
@@ -43,6 +45,7 @@ class _HomePageState extends State<HomePage> {
       const NavigationDestination(icon: Icon(Icons.sports_soccer), label: 'Canchas'),
       const NavigationDestination(icon: Icon(Icons.groups), label: 'Equipos'),
       if (hasTeam) const NavigationDestination(icon: Icon(Icons.shield), label: 'Mi equipo'),
+      const NavigationDestination(icon: Icon(Icons.sports), label: 'Partidos'),
       const NavigationDestination(icon: Icon(Icons.event_available), label: 'Reservas'),
       const NavigationDestination(icon: Icon(Icons.account_balance_wallet), label: 'Wallet'),
       const NavigationDestination(icon: Icon(Icons.person_rounded), label: 'Perfil'),

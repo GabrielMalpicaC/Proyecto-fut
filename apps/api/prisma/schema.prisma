@@ -114,6 +114,9 @@ model Team {
   members       TeamMember[]
   invitations   TeamInvitation[]
   applications  TeamApplication[]
+  homeMatches   Match[]           @relation("HomeTeam")
+  awayMatches   Match[]           @relation("AwayTeam")
+  queueEntries  MatchQueue[]
   createdAt     DateTime          @default(now())
 }
 
@@ -161,6 +164,54 @@ model TeamApplication {
 
   @@unique([teamId, userId])
   @@index([teamId, status])
+}
+
+enum MatchMode {
+  CASUAL
+  COMPETITIVE
+}
+
+enum MatchStatus {
+  SCHEDULED
+  IN_PROGRESS
+  FINISHED
+  CANCELED
+}
+
+enum MatchQueueStatus {
+  SEARCHING
+  MATCHED
+  CANCELED
+}
+
+model Match {
+  id          String      @id @default(uuid())
+  mode        MatchMode
+  status      MatchStatus @default(SCHEDULED)
+  homeTeamId  String
+  awayTeamId  String
+  createdAt   DateTime    @default(now())
+  matchedAt   DateTime?
+  homeTeam    Team        @relation("HomeTeam", fields: [homeTeamId], references: [id], onDelete: Cascade)
+  awayTeam    Team        @relation("AwayTeam", fields: [awayTeamId], references: [id], onDelete: Cascade)
+  queueEntries MatchQueue[]
+
+  @@index([mode, status, createdAt])
+}
+
+model MatchQueue {
+  id         String           @id @default(uuid())
+  teamId     String
+  mode       MatchMode
+  status     MatchQueueStatus @default(SEARCHING)
+  createdAt  DateTime         @default(now())
+  matchedAt  DateTime?
+  matchId    String?
+  team       Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  match      Match?           @relation(fields: [matchId], references: [id], onDelete: SetNull)
+
+  @@index([mode, status, createdAt])
+  @@unique([teamId, mode, status])
 }
 
 model Venue {
