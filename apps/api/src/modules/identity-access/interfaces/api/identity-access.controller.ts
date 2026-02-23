@@ -1,14 +1,34 @@
-import { Body, Controller, Post, UsePipes } from '@nestjs/common';
+import { Body, Controller, Get, Post, UsePipes } from '@nestjs/common';
 import { UserRole } from '@/common/enums';
 import { z } from 'zod';
 import { ZodValidationPipe } from '@/common/validation/zod-validation.pipe';
 import { IdentityAccessService } from '../../application/identity-access.service';
 
+const roleAliasMap: Record<string, UserRole> = {
+  PLAYER: UserRole.PLAYER,
+  JUGADOR: UserRole.PLAYER,
+  VENUE_OWNER: UserRole.VENUE_OWNER,
+  OWNER: UserRole.VENUE_OWNER,
+  PROPIETARIO: UserRole.VENUE_OWNER,
+  PROPIETARIO_CANCHA: UserRole.VENUE_OWNER,
+  REFEREE: UserRole.REFEREE,
+  ARBITRO: UserRole.REFEREE,
+  ÁRBITRO: UserRole.REFEREE,
+  ADMIN: UserRole.ADMIN
+};
+
+const roleValueSchema = z
+  .string()
+  .transform((value) => value.trim().toUpperCase())
+  .transform((value) => roleAliasMap[value] ?? value)
+  .pipe(z.nativeEnum(UserRole));
+
 const registerSchema = z.object({
   email: z.string().email(),
   fullName: z.string().min(3),
   password: z.string().min(8),
-  roles: z.array(z.nativeEnum(UserRole)).optional()
+  role: roleValueSchema.optional(),
+  roles: z.array(roleValueSchema).optional()
 });
 
 const loginSchema = z.object({
@@ -24,10 +44,29 @@ const refreshSchema = z.object({
 export class IdentityAccessController {
   constructor(private readonly identityAccessService: IdentityAccessService) {}
 
+  @Get('register')
+  registerInfo() {
+    return {
+      ok: true,
+      message: 'Usa POST /auth/register para crear cuenta'
+    };
+  }
+
   @Post('register')
   @UsePipes(new ZodValidationPipe(registerSchema))
   register(@Body() body: z.infer<typeof registerSchema>) {
-    return this.identityAccessService.register(body);
+    const normalizedRoles = body.roles?.length
+      ? body.roles
+      : body.role
+        ? [body.role]
+        : undefined;
+
+    return this.identityAccessService.register({
+      email: body.email,
+      fullName: body.fullName,
+      password: body.password,
+      roles: normalizedRoles
+    });
   }
 
   @Post('login')
