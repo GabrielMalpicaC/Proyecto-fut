@@ -25,8 +25,8 @@ const roleValueSchema = z
 
 const registerSchema = z.object({
   email: z.string().email(),
-  fullName: z.string().min(3),
-  password: z.string().min(8),
+  fullName: z.string().min(1).optional(),
+  password: z.string().min(4),
   role: roleValueSchema.optional(),
   roles: z.array(roleValueSchema).optional()
 });
@@ -61,9 +61,12 @@ export class IdentityAccessController {
         ? [body.role]
         : undefined;
 
+    const fallbackName = body.email.split('@')[0] ?? 'Usuario';
+    const normalizedFullName = body.fullName?.trim() || fallbackName;
+
     return this.identityAccessService.register({
       email: body.email,
-      fullName: body.fullName,
+      fullName: normalizedFullName,
       password: body.password,
       roles: normalizedRoles
     });
